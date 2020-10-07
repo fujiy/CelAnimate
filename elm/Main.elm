@@ -1,8 +1,10 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, node, text)
+import Html.Attributes exposing (attribute, class, height, id, property, width)
 import Html.Events exposing (onClick)
+import Json.Encode exposing (int, string)
 
 
 main =
@@ -23,9 +25,30 @@ update msg model =
             model - 1
 
 
+view : number -> Html Msg
 view model =
-    div []
-        [ button [ onClick Decrement ] [ text "-" ]
-        , div [] [ text (String.fromInt model) ]
-        , button [ onClick Increment ] [ text "+" ]
+    node "three-canvas"
+        [ width 400
+        , height 300
+        , attribute "scene-id" "scene"
+        ]
+        [ node "three-scene"
+            [ id "scene"
+            , attribute "camera-id" "camera"
+            ]
+            [ node "camera-perspective"
+                [ id "camera"
+                , width 400
+                , height 300
+                ]
+                []
+            , node "three-mesh"
+                []
+                [ node "geometry-box" [] []
+                , node "material-mesh-basic"
+                    [ attribute "color" "#00ff00"
+                    ]
+                    []
+                ]
+            ]
         ]
