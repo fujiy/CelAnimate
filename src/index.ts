@@ -1,9 +1,9 @@
 'use strict';
 
 require('./index.html');
-require('./three.js');
+require('./three.ts');
 
-import { Elm } from '../elm/Main.elm';
+const { Elm } = require('../elm/Main.elm');
 const mountNode = document.getElementById('main');
 
 const app = Elm.Main.init({node: mountNode});

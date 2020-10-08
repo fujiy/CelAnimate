@@ -3,7 +3,7 @@ var path = require("path");
 module.exports = {
     entry: {
         app: [
-            './src/index.js'
+            './src/index.ts'
         ]
     },
 
@@ -27,6 +27,10 @@ module.exports = {
                 loader:  'file-loader?name=[name].[ext]',
             },
             {
+                test: /\.ts$/,
+                use: 'ts-loader',
+            },
+            {
                 test:    /\.elm$/,
                 exclude: [/elm-stuff/, /node_modules/],
                 loader:  'elm-webpack-loader?verbose=true',
@@ -42,6 +46,12 @@ module.exports = {
         ],
 
         noParse: /\.elm$/,
+    },
+
+    resolve: {
+        extensions: [
+            '.ts', '.js',
+        ],
     },
 
     devServer: {
