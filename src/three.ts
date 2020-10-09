@@ -1,6 +1,46 @@
 import * as THREE from 'three';
 
-class ThreeCanvas extends HTMLElement {
+class ThreeElement extends HTMLElement {
+    childrenCount: number = 0
+
+    constructor() {
+        super()
+    }
+    childIs<T extends ThreeElement>(cls: any): T | null {
+        return Array.from(this.children).filter(
+            e => { return e instanceof cls }
+        )[0] as T || null
+
+    }
+
+    connectedCallback() {
+        this.willConnect()
+
+        setTimeout(() => {
+            this.childrenCount =
+                Array.from(this.children).filter(
+                    e => { return e instanceof ThreeElement }).length
+
+            if (this.childrenCount == 0) {
+                this.connectedBubble()
+            }
+        })
+    }
+    connectedBubble() {
+        if (this.childrenCount <= 1) {
+            this.didConnect()
+            if (this.parentElement instanceof ThreeElement) {
+                this.parentElement.connectedBubble()
+            }
+        }
+        else this.childrenCount--
+    }
+
+    willConnect() {}
+    didConnect() {}
+}
+
+class ThreeCanvas extends ThreeElement {
     renderer: THREE.WebGLRenderer
 
     constructor() {
@@ -8,7 +48,7 @@ class ThreeCanvas extends HTMLElement {
         this.renderer = new THREE.WebGLRenderer()
     }
     static get observedAttributes(): string[] {
-        return ['width', 'height', 'scene-id']
+        return ['width', 'height']
     }
     attributeChangedCallback() {
         this.renderer.setSize(+this.getAttribute('width'),
@@ -21,7 +61,7 @@ class ThreeCanvas extends HTMLElement {
         // nothing to do
     }
 
-    connectedCallback() {
+    willConnect() {
         this.appendChild(this.renderer.domElement)
 
         const self = this
@@ -32,7 +72,7 @@ class ThreeCanvas extends HTMLElement {
 
             self.renderer.render(scene.object3d, camera.object3d)
 
-            requestAnimationFrame(animate);
+            requestAnimationFrame(animate)
         };
 
         animate();
@@ -40,18 +80,21 @@ class ThreeCanvas extends HTMLElement {
     }
 }
 
-class ThreeObject extends HTMLElement {
+class ThreeObject extends ThreeElement {
     object3d: THREE.Object3D
 
     constructor() {
         super();
         this.object3d = null;
     }
-    connectedCallback() {
-        (this.parentElement as ThreeObject).add(this);
+    static get observedAttributes(): string[] {
+        return [];
+    }
+    didConnect() {
+        (this.parentElement as ThreeObject).add(this)
     }
     add(object: ThreeObject) {
-        this.object3d.add(object.object3d);
+        this.object3d.add(object.object3d)
     }
 }
 
@@ -60,8 +103,8 @@ class ThreeScene extends ThreeObject {
         super();
         this.object3d = new THREE.Scene();
     }
-    static get observedAttributes() {
-        return ['camera-id'];
+    static get observedAttributes(): string[] {
+        return super.observedAttributes.concat(['camera-id'])
     }
 
 
@@ -77,6 +120,10 @@ class ThreeCamera extends ThreeObject {
     constructor() {
         super()
     }
+    static get observedAttributes(): string[] {
+        return [];
+    }
+
 }
 
 class PerspectiveCamera extends ThreeCamera {
@@ -86,14 +133,17 @@ class PerspectiveCamera extends ThreeCamera {
         this.object3d = new THREE.PerspectiveCamera(
             75, 1,
             0.1, 1000);
-        this.object3d.position.z = 5;
+        this.object3d.position.z = 2;
+    }
+    static get observedAttributes(): string[] {
+        return super.observedAttributes.concat(['width', 'height'])
     }
     attributeChangedCallback() {
         this.object3d.aspect =
-            +this.getAttribute('width') / +this.getAttribute('height');
+            +this.getAttribute('width') / +this.getAttribute('height')
         this.object3d.updateProjectionMatrix();
     }
-    connectedCallback() {
+    willConnect() {
         this.attributeChangedCallback();
     }
 }
@@ -103,31 +153,26 @@ class ThreeMesh extends ThreeObject {
     constructor() {
         super();
     }
-    connectedCallback() {
-        const geometry =
-            Array.from(this.children).filter(
-                e => { return e instanceof ThreeGeometry }
-            )[0] as ThreeGeometry
-        const material =
-            Array.from(this.children).filter(
-                e => { return e instanceof ThreeMaterial }
-            )[0] as ThreeMaterial
+    didConnect() {
+        // const geometry =
+            // Array.from(this.children).filter(
+            //     e => { return e instanceof ThreeGeometry }
+            // )[0] as ThreeGeometry
+        const geometry: ThreeGeometry = this.childIs(ThreeGeometry)
+        const material: ThreeMaterial = this.childIs(ThreeMaterial)
         this.object3d = this.object3d ||
             new THREE.Mesh(geometry.geometry, material.material);
 
-        super.connectedCallback();
-
         const animate = () => {
-
-            this.object3d.rotation.x += 0.01;
-            this.object3d.rotation.y += 0.01;
             requestAnimationFrame(animate);
         }
         animate();
+
+        super.didConnect()
     }
 }
 
-class ThreeGeometry extends HTMLElement {
+class ThreeGeometry extends ThreeElement {
     geometry: THREE.Geometry
     constructor() {
         super();
@@ -142,13 +187,13 @@ class BoxGeometry extends ThreeGeometry {
     }
 }
 
-class ThreeMaterial extends HTMLElement {
+class ThreeMaterial extends ThreeElement {
     material: THREE.Material
     constructor() {
-        super();
+        super()
     }
     static get observedAttributes(): string[] {
-        return [];
+        return []
     }
 }
 
@@ -159,11 +204,30 @@ class MeshBasicMaterial extends ThreeMaterial {
         this.material = new THREE.MeshBasicMaterial();
     }
     static get observedAttributes(): string[] {
-        return ThreeMaterial.observedAttributes.concat(['color'])
+        return super.observedAttributes.concat(['color'])
     }
     attributeChangedCallback() {
         // this.material.color = this.getAttribute('color');
-        this.material.color = new THREE.Color(this.getAttribute('color'));
+        if (this.getAttribute('color')) {
+            this.material.color = new THREE.Color(this.getAttribute('color'));
+        }
+    }
+    didConnect() {
+        const texture: ThreeTexture = this.childIs(ThreeTexture)
+        if (texture) this.material.map = texture.texture
+    }
+}
+
+class ThreeTexture extends ThreeElement {
+    texture: THREE.Texture
+
+    constructor() {
+        super();
+    }
+    willConnect() {
+        const src    = this.getAttribute('src')
+        const loader = new THREE.TextureLoader()
+        this.texture = loader.load(src)
     }
 }
 
@@ -173,3 +237,4 @@ customElements.define('three-mesh',   ThreeMesh);
 customElements.define('camera-perspective', PerspectiveCamera);
 customElements.define('geometry-box', BoxGeometry);
 customElements.define('material-mesh-basic',  MeshBasicMaterial);
+customElements.define('three-texture',  ThreeTexture);

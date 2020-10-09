@@ -49,6 +49,7 @@ const mainConfig = {
 
         noParse: /\.elm$/,
     },
+    devtool: "source-map",
     externals: {
         fsevents: "require('fsevents')"
     },
@@ -117,6 +118,7 @@ const rendererConfig = {
         contentBase: './dist',
         stats: { colors: true },
     },
+    devtool: "source-map",
     plugins: [
         new HtmlWebpackPlugin({
             title: "Cel Animate"

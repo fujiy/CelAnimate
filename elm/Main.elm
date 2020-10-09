@@ -1,35 +1,60 @@
 module Main exposing (..)
 
 import Browser
+import Browser.Dom exposing (getViewport)
+import Browser.Events exposing (onResize)
 import Html exposing (Html, button, div, node, text)
-import Html.Attributes exposing (attribute, class, height, id, property, width)
+import Html.Attributes exposing (attribute, class, height, id, property, src, width)
 import Html.Events exposing (onClick)
 import Json.Encode exposing (int, string)
+import Task
 
 
 main =
-    Browser.sandbox { init = 0, update = update, view = view }
+    Browser.element
+        { init = init
+        , update = update
+        , view = view
+        , subscriptions = subs
+        }
 
 
 type Msg
-    = Increment
-    | Decrement
+    = WindowResized Int Int
 
 
+type alias Model =
+    { screenSize : { width : Int, height : Int }
+    }
+
+
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( { screenSize = { width = 800, height = 600 } }
+    , Task.perform
+        (\{ viewport } ->
+            WindowResized
+                (round viewport.width)
+                (round viewport.height)
+        )
+        getViewport
+    )
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Increment ->
-            model + 1
+        WindowResized w h ->
+            ( { model | screenSize = { width = w, height = h } }
+            , Cmd.none
+            )
 
-        Decrement ->
-            model - 1
 
-
-view : number -> Html Msg
+view : Model -> Html Msg
 view model =
     node "three-canvas"
-        [ width 400
-        , height 300
+        [ width model.screenSize.width
+        , height model.screenSize.height
         , attribute "scene-id" "scene"
         ]
         [ node "three-scene"
@@ -38,17 +63,25 @@ view model =
             ]
             [ node "camera-perspective"
                 [ id "camera"
-                , width 400
-                , height 300
+                , width model.screenSize.width
+                , height model.screenSize.height
                 ]
                 []
             , node "three-mesh"
                 []
                 [ node "geometry-box" [] []
                 , node "material-mesh-basic"
-                    [ attribute "color" "#00ff00"
-                    ]
                     []
+                    [ node "three-texture"
+                        [ attribute "src" "../sample/1.png"
+                        ]
+                        []
+                    ]
                 ]
             ]
         ]
+
+
+subs : Model -> Sub Msg
+subs model =
+    onResize WindowResized
