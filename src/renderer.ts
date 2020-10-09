@@ -1,6 +1,6 @@
 import  'electron'
 
-require('./three.ts')
+import './three.ts'
 const { Elm } = require('../elm/Main.elm')
 
 const mountNode = document.createElement('div');
