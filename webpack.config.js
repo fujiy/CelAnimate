@@ -1,5 +1,6 @@
 var path = require("path");
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const HardSourceWebpackPlugin = require('hard-source-webpack-plugin');
 
 const outputPath = path.resolve(__dirname + '/dist');
 
@@ -55,7 +56,10 @@ const mainConfig = {
     },
     node: {
         __dirname: false
-    }
+    },
+    plugins: [
+        new HardSourceWebpackPlugin()
+    ]
 };
 
 const rendererConfig = {
@@ -122,7 +126,8 @@ const rendererConfig = {
     plugins: [
         new HtmlWebpackPlugin({
             title: "Cel Animate"
-        })
+        }),
+        new HardSourceWebpackPlugin()
     ],
 
 };
