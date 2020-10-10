@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+import * as THREE from 'three'
+import Stats from 'stats-js'
 
 import {ThreeElement, ThreeObject} from './three/element'
 import {ThreeCamera} from './three/camera'
@@ -33,11 +34,21 @@ class ThreeCanvas extends ThreeElement {
     didConnect() {
         this.appendChild(this.renderer.domElement)
 
+        console.log(Stats)
+
+        var stats = new Stats();
+        stats.showPanel(0); 
+        document.body.appendChild( stats.dom );
+
         const animate = () => {
+            stats.begin();
+
             const scene  = this.scene
             const camera = scene.camera
 
             this.renderer.render(scene.object3d, camera.object3d)
+
+            stats.end();
 
             requestAnimationFrame(animate)
         };
@@ -48,12 +59,15 @@ class ThreeCanvas extends ThreeElement {
 }
 
 class ThreeScene extends ThreeObject {
+    object3d: THREE.Scene
+
     constructor() {
         super();
         this.object3d = new THREE.Scene();
+        this.object3d.background = new THREE.Color("white");
     }
     static get observedAttributes(): string[] {
-        return super.observedAttributes.concat(['camera-id'])
+        return super.observedAttributes.concat(['camera-id', 'background'])
     }
 
 
