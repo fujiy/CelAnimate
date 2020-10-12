@@ -6,11 +6,31 @@ import {ThreeElement} from './element'
 
 export class ThreeMaterial extends ThreeElement {
     material: THREE.Material
+
+    static get observedAttributes(): string[] {
+        return [] 
+    }
+}
+
+export class LineBasicMaterial extends ThreeMaterial {
+    material: THREE.LineBasicMaterial
     constructor() {
         super()
+        this.material = new THREE.LineBasicMaterial()
     }
     static get observedAttributes(): string[] {
-        return []
+        return super.observedAttributes.concat(['color', 'linewidth'])
+    }
+    attrChanged(name: string, value: any) {
+        console.log(this, this.material, name, value)
+        switch (name) {
+            case 'color':
+                this.material.color = value && new THREE.Color(value);
+                break
+            case 'linewidth':
+                this.material.linewidth = value;
+                break
+        }
     }
 }
 
@@ -21,12 +41,16 @@ export class MeshBasicMaterial extends ThreeMaterial {
         this.material = new THREE.MeshBasicMaterial();
     }
     static get observedAttributes(): string[] {
-        return super.observedAttributes.concat(['color'])
+        return super.observedAttributes.concat(['color', 'wireframe'])
     }
-    attributeChangedCallback() {
-        // this.material.color = this.getAttribute('color');
-        if (this.getAttribute('color')) {
-            this.material.color = new THREE.Color(this.getAttribute('color'));
+    attrChanged(name: string, value: any) {
+        switch (name) {
+            case 'color':
+                this.material.color = value && new THREE.Color(value);
+                break
+            case 'wireframe':
+                this.material.wireframe = !!value
+                break
         }
     }
     didConnect() {
@@ -42,7 +66,7 @@ export class ThreeTexture extends ThreeElement {
         super();
     }
     willConnect() {
-        const src    = this.getAttribute('src')
+        const src    = this.attr('src')
         const loader = new THREE.TextureLoader()
         this.texture = loader.load(src)
     }
@@ -50,4 +74,5 @@ export class ThreeTexture extends ThreeElement {
 
 
 customElements.define('material-mesh-basic',  MeshBasicMaterial);
+customElements.define('material-line-basic',  LineBasicMaterial);
 customElements.define('three-texture',  ThreeTexture);

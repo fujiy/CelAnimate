@@ -24,15 +24,12 @@ export class PerspectiveCamera extends ThreeCamera {
         this.object3d.position.z = 2;
     }
     static get observedAttributes(): string[] {
-        return super.observedAttributes.concat(['width', 'height'])
+        return super.observedAttributes.concat(['aspect', 'fov'])
     }
-    attributeChangedCallback() {
-        this.object3d.aspect =
-            +this.getAttribute('width') / +this.getAttribute('height')
+    attrChanged() {
+        this.object3d.aspect = this.numAttr('aspect')
+        this.object3d.fov = this.numAttr('fov')
         this.object3d.updateProjectionMatrix();
-    }
-    willConnect() {
-        this.attributeChangedCallback();
     }
 }
 

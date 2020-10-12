@@ -14,6 +14,17 @@ export class ThreeElement extends HTMLElement {
 
     }
 
+    attr(name: string): string {
+        return this.getAttribute(name)
+    }
+    numAttr(name: string): number {
+        const num = this.getAttribute(name)
+        return num ? +num : undefined
+    }
+
+    attributeChangedCallback(name: string, _oldValue: any, newValue: any) {
+        this.attrChanged(name, newValue)
+    }
     connectedCallback() {
         this.willConnect()
 
@@ -37,6 +48,7 @@ export class ThreeElement extends HTMLElement {
         else this.childrenCount--
     }
 
+    attrChanged(name: string, value: any) {}
     willConnect() {}
     didConnect() {}
 }
@@ -52,11 +64,20 @@ export class ThreeObject extends ThreeElement {
     static get observedAttributes(): string[] {
         return [];
     }
+
     didConnect() {
         (this.parentElement as ThreeObject).add(this)
     }
     add(object: ThreeObject) {
         this.object3d.add(object.object3d)
+    }
+
+    set position(v) {
+        if (this.object3d) {
+            this.object3d.position.x = v[0]
+            this.object3d.position.y = v[1]
+            this.object3d.position.z = v[2]
+        }
     }
 }
 

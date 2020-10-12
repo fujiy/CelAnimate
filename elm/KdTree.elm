@@ -75,9 +75,11 @@ build_ p2a points axis =
                 get_ axis median_
 
             less =
+                -- Debug.log "less" <|
                 Array.filter (\a -> get_ axis (p2a a) < medianValue) points_
 
             greater =
+                -- Debug.log "greater" <|
                 Array.filter (\a -> get_ axis (p2a a) >= medianValue) points_
         in
         TreeNode
@@ -222,4 +224,4 @@ get_ i array =
             a
 
         Nothing ->
-            Debug.todo ""
+            Debug.todo "Out of range"

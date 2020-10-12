@@ -14,11 +14,13 @@ const mainConfig = {
     module: {
         rules: [
             {
-                test: /\.(css|scss)$/,
-                loaders: [
+                test: /\.s[ac]ss$/i,
+                use: [
                     'style-loader',
                     'css-loader',
-                ]
+                    // "postcss-loader",
+                    'sass-loader',
+                ],
             },
             {
                 test:    /\.html$/,
@@ -73,11 +75,13 @@ const rendererConfig = {
     module: {
         rules: [
             {
-                test: /\.(css|scss)$/,
-                loaders: [
+                test: /\.s[ac]ss$/i,
+                use: [
                     'style-loader',
                     'css-loader',
-                ]
+                    // "postcss-loader",
+                    'sass-loader',
+                ],
             },
             {
                 test:    /\.html$/,

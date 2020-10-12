@@ -7,27 +7,30 @@ import {ThreeMaterial} from './material'
 
 
 export class ThreeMesh extends ThreeObject {
-    constructor() {
-        super();
-    }
     didConnect() {
-        // const geometry =
-        // Array.from(this.children).filter(
-        //     e => { return e instanceof ThreeGeometry }
-        // )[0] as ThreeGeometry
         const geometry: ThreeGeometry = this.childIs(ThreeGeometry)
         const material: ThreeMaterial = this.childIs(ThreeMaterial)
+        if (!geometry.geometry) return
         this.object3d = this.object3d ||
-            new THREE.Mesh(geometry.geometry, material.material);
-
-        const animate = () => {
-            requestAnimationFrame(animate);
-        }
-        animate();
+            new THREE.Mesh(geometry.geometry,
+                           material && material.material)
 
         super.didConnect()
     }
 }
 
+export class ThreeLineSegments extends ThreeObject {
+    didConnect() {
+        const geometry: ThreeGeometry = this.childIs(ThreeGeometry)
+        const material: ThreeMaterial = this.childIs(ThreeMaterial)
+        if (!geometry.geometry) return
+        this.object3d = this.object3d ||
+            new THREE.LineSegments(geometry.geometry,
+                                   material && material.material)
+
+        super.didConnect()
+    }
+}
 
 customElements.define('three-mesh',   ThreeMesh);
+customElements.define('three-line-segments',   ThreeLineSegments);

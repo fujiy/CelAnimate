@@ -20,7 +20,7 @@ class ThreeCanvas extends ThreeElement {
     static get observedAttributes(): string[] {
         return ['width', 'height']
     }
-    attributeChangedCallback() {
+    attrChanged() {
         this.renderer.setSize(+this.getAttribute('width'),
                               +this.getAttribute('height'))
     }
