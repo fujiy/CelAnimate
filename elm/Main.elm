@@ -7,6 +7,8 @@ import Browser.Events exposing (onResize)
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
 import CelAnimate.Editor exposing (..)
+import CelAnimate.Tool exposing (..)
+import CelAnimate.Tool.PolygonDraw exposing (..)
 import Html exposing (Attribute, Html, button, div, node, text)
 import Html.Attributes exposing (attribute, class, height, id, property, src, style, width)
 import Html.Events exposing (onClick)
@@ -156,14 +158,14 @@ update msg model =
                                     PolygonDraw <|
                                         initPolygonDrawState
 
-                cmd =
-                    case newToolState of
-                        PolygonDraw ts ->
-                            Debug.log
-                                (Debug.toString <|
-                                    KdTree.toArray ts.kdTree
-                                )
-                                ()
+                -- cmd =
+                --     case newToolState of
+                --         PolygonDraw ts ->
+                --             Debug.log
+                --                 (Debug.toString <|
+                --                     KdTree.toArray ts.kdTree
+                --                 )
+                --                 ()
             in
             ( { model
                 | cursor = newCursor
@@ -200,28 +202,32 @@ view model =
                     , floatAttr "fov" model.camera.fov
                     ]
                     []
-                , node "three-mesh"
-                    []
-                    [ node "geometry-buffer"
-                        (case model.toolState of
-                            PolygonDraw state ->
-                                [ property "vertices" <|
-                                    Json.list (\( _, v ) -> encodeVec3 v) <|
-                                        List.sortBy (\( i, _ ) -> i) <|
-                                            Array.toList <|
-                                                KdTree.toArray state.kdTree
-                                , property "faces" <|
-                                    Json.array encodeFace <|
-                                        state.polygons
-                                ]
-                        )
-                        []
-                    , node "material-mesh-basic"
-                        [ attribute "color" "black"
-                        , boolAttr "wireframe" True
-                        ]
-                        []
-                    ]
+                , case model.toolState of
+                    PolygonDraw state ->
+                        polygonMesh <| drawingPolygon state
+
+                -- , node "three-mesh"
+                --     []
+                -- [ node "geometry-buffer"
+                --     (case model.toolState of
+                --         PolygonDraw state ->
+                --             [ property "vertices" <|
+                --                 Json.list (\( _, v ) -> encodeVec3 v) <|
+                --                     List.sortBy (\( i, _ ) -> i) <|
+                --                         Array.toList <|
+                --                             KdTree.toArray state.kdTree
+                --             , property "faces" <|
+                --                 Json.array encodeFace <|
+                --                     state.polygons
+                --             ]
+                --     )
+                --     []
+                -- , node "material-mesh-basic"
+                --     [ attribute "color" "black"
+                --     , boolAttr "wireframe" True
+                --     ]
+                --     []
+                -- ]
                 , node "three-line-segments"
                     [ property "position" <|
                         encodeVec3 <|
@@ -329,24 +335,3 @@ cursorVelocity model ( vx, vy ) =
 subs : Model -> Sub Msg
 subs model =
     onResize WindowResized
-
-
-intAttr : String -> Int -> Attribute msg
-intAttr name n =
-    attribute name (String.fromInt n)
-
-
-floatAttr : String -> Float -> Attribute msg
-floatAttr name x =
-    attribute name (String.fromFloat x)
-
-
-boolAttr : String -> Bool -> Attribute msg
-boolAttr name b =
-    attribute name
-        (if b then
-            "true"
-
-         else
-            ""
-        )

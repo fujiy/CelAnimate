@@ -2,6 +2,7 @@ module Array.More exposing (..)
 
 import Array exposing (..)
 import Array.Extra exposing (..)
+import List
 
 
 product : Array a -> Array b -> Array ( a, b )
@@ -59,6 +60,11 @@ minmumBy f =
                         Just b
     in
     foldr go Nothing
+
+
+sortBy : (a -> comparable) -> Array a -> Array a
+sortBy f =
+    toList >> List.sortBy f >> fromList
 
 
 get_ : Int -> Array a -> a

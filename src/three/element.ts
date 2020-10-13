@@ -81,3 +81,11 @@ export class ThreeObject extends ThreeElement {
     }
 }
 
+export class ThreeGroup extends ThreeObject {
+
+    willConnect() {
+        this.object3d = new THREE.Group()
+    }
+}
+
+customElements.define('three-group',   ThreeGroup);

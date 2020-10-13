@@ -112,6 +112,15 @@ encodeFace ( i, j, k ) =
     Json.list Json.int [ i, j, k ]
 
 
+verticeToArray : IndexedVertice -> Array Float
+verticeToArray ( i, v ) =
+    let
+        r =
+            Vec3.toRecord v
+    in
+    Array.fromList [ r.x, r.y, r.z ]
+
+
 fromJust : Maybe a -> a
 fromJust m =
     case m of

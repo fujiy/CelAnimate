@@ -8,7 +8,18 @@ export class ThreeMaterial extends ThreeElement {
     material: THREE.Material
 
     static get observedAttributes(): string[] {
-        return [] 
+        return ['opacity', 'transparent']
+    }
+    attributeChangedCallback(name: string, oldValue: any, value: any) {
+        super.attributeChangedCallback(name, oldValue, value)
+        switch (name) {
+            case 'opacity':
+                this.material.opacity = value
+                break
+            case 'transparent':
+                this.material.transparent = value
+                break
+        }
     }
 }
 

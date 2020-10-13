@@ -11,12 +11,14 @@ type alias Data =
 
 
 type alias Cel =
-    { keyframes : Array Keyframe
+    { name : String
+    , keyframes : Array Keyframe
     }
 
 
 type alias Keyframe =
-    { image : String
+    { name : String
+    , image : String
     , mesh : Mesh
     }
 
