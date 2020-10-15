@@ -31,11 +31,7 @@ const mainConfig = {
                 test: /\.ts$/,
                 use: 'ts-loader',
             },
-            {
-                test:    /\.elm$/,
-                exclude: [/elm-stuff/, /node_modules/],
-                loader:  'elm-webpack-loader?verbose=true',
-            },
+            
             {
                 test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
                 loader: 'url-loader?limit=10000&mimetype=application/font-woff',
@@ -49,9 +45,9 @@ const mainConfig = {
                 loader: "html-loader"
             }
         ],
-
-        noParse: /\.elm$/,
     },
+
+
     devtool: "source-map",
     externals: {
         fsevents: "require('fsevents')"
@@ -96,6 +92,9 @@ const rendererConfig = {
                 test:    /\.elm$/,
                 exclude: [/elm-stuff/, /node_modules/],
                 loader:  'elm-webpack-loader?verbose=true',
+                options: {
+                    debug: true,
+                }
             },
             {
                 test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
@@ -111,7 +110,6 @@ const rendererConfig = {
             }
 
         ],
-
         noParse: /\.elm$/,
     },
 
@@ -119,6 +117,13 @@ const rendererConfig = {
         extensions: [
             '.ts', '.js',
         ],
+    },
+
+    watch: true,
+    watchOptions: {
+        aggregateTimeout: 200,
+        poll: 500,
+        ignored: '**/.#*'
     },
 
     devServer: {

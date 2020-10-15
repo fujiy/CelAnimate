@@ -13,8 +13,6 @@ import Html exposing (Attribute, Html, button, div, node, text)
 import Html.Attributes exposing (attribute, class, height, id, property, src, style, width)
 import Html.Events exposing (onClick)
 import Html.Events.Extra.Pointer as Pointer
-import Json.Encode as Json exposing (int, list, string)
-import KdTree
 import Math.Vector3 as Vec3 exposing (Vec3)
 import String
 import Task
@@ -175,10 +173,20 @@ update msg model =
             )
 
 
+dataTree : Data -> Three msg
+dataTree data =
+    node "tree-group"
+        [ class "data-tree"
+        , attribute "text" data.path
+        ]
+        []
+
+
 view : Model -> Html Msg
 view model =
     div []
-        [ cursorView model
+        [ dataTree model.data
+        , cursorView model
         , node "three-canvas"
             [ width model.screenSize.width
             , height model.screenSize.height
@@ -205,29 +213,6 @@ view model =
                 , case model.toolState of
                     PolygonDraw state ->
                         polygonMesh <| drawingPolygon state
-
-                -- , node "three-mesh"
-                --     []
-                -- [ node "geometry-buffer"
-                --     (case model.toolState of
-                --         PolygonDraw state ->
-                --             [ property "vertices" <|
-                --                 Json.list (\( _, v ) -> encodeVec3 v) <|
-                --                     List.sortBy (\( i, _ ) -> i) <|
-                --                         Array.toList <|
-                --                             KdTree.toArray state.kdTree
-                --             , property "faces" <|
-                --                 Json.array encodeFace <|
-                --                     state.polygons
-                --             ]
-                --     )
-                --     []
-                -- , node "material-mesh-basic"
-                --     [ attribute "color" "black"
-                --     , boolAttr "wireframe" True
-                --     ]
-                --     []
-                -- ]
                 , node "three-line-segments"
                     [ property "position" <|
                         encodeVec3 <|

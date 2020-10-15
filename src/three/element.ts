@@ -48,9 +48,9 @@ export class ThreeElement extends HTMLElement {
         else this.childrenCount--
     }
 
-    attrChanged(name: string, value: any) {}
-    willConnect() {}
-    didConnect() {}
+    attrChanged(name: string, value: any) { }
+    willConnect() { }
+    didConnect() { }
 }
 
 
@@ -66,7 +66,13 @@ export class ThreeObject extends ThreeElement {
     }
 
     didConnect() {
-        (this.parentElement as ThreeObject).add(this)
+        if (this.parentElement instanceof ThreeObject) {
+            (this.parentElement as ThreeObject).add(this)
+        }
+        else {
+            console.log("parent element is not a three object",
+                this.parentElement, this)
+        }
     }
     add(object: ThreeObject) {
         this.object3d.add(object.object3d)
@@ -88,4 +94,4 @@ export class ThreeGroup extends ThreeObject {
     }
 }
 
-customElements.define('three-group',   ThreeGroup);
+customElements.define('three-group', ThreeGroup);

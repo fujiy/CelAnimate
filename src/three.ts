@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 import Stats from 'stats-js'
 
-import {ThreeElement, ThreeObject} from './three/element'
-import {ThreeCamera} from './three/camera'
+import { ThreeElement, ThreeObject } from './three/element'
+import { ThreeCamera } from './three/camera'
 import './three/element'
 import './three/camera'
 import './three/mesh'
@@ -22,7 +22,7 @@ class ThreeCanvas extends ThreeElement {
     }
     attrChanged() {
         this.renderer.setSize(+this.getAttribute('width'),
-                              +this.getAttribute('height'))
+            +this.getAttribute('height'))
     }
     get scene(): ThreeScene {
         return document.getElementById(this.getAttribute('scene-id')) as ThreeScene
@@ -34,16 +34,14 @@ class ThreeCanvas extends ThreeElement {
     didConnect() {
         this.appendChild(this.renderer.domElement)
 
-        console.log(Stats)
-
         var stats = new Stats();
-        stats.showPanel(0); 
-        document.body.appendChild( stats.dom );
+        stats.showPanel(0);
+        document.body.appendChild(stats.dom);
 
         const animate = () => {
             stats.begin();
 
-            const scene  = this.scene
+            const scene = this.scene
             const camera = scene.camera
 
             this.renderer.render(scene.object3d, camera.object3d)
@@ -75,8 +73,8 @@ class ThreeScene extends ThreeObject {
         return document.getElementById(
             this.getAttribute('camera-id')) as ThreeCamera
     }
-        // [...this.children].map(e => { this.object.add(e.object); });
+    // [...this.children].map(e => { this.object.add(e.object); });
 }
 
 customElements.define('three-canvas', ThreeCanvas);
-customElements.define('three-scene',  ThreeScene);
+customElements.define('three-scene', ThreeScene);

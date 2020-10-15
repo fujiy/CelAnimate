@@ -45,6 +45,8 @@ initCameraState =
     }
 
 
+
+
 polygonMesh : Mesh -> Three msg
 polygonMesh mesh =
     let
@@ -83,7 +85,7 @@ polygonMesh mesh =
                 , boolAttr "transparent" True
                 , floatAttr "opacity" 0.5
                 ]
-                []
+                [] 
             ]
         ]
 

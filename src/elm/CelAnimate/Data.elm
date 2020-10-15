@@ -25,6 +25,6 @@ type alias Keyframe =
 
 zeroData : Data
 zeroData =
-    { path = ""
+    { path = "untitled"
     , cels = Array.empty
     }
