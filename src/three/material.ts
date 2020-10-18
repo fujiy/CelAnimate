@@ -1,7 +1,7 @@
 
 import * as THREE from 'three';
 
-import {ThreeElement} from './element'
+import { ThreeElement } from './element'
 
 
 export class ThreeMaterial extends ThreeElement {
@@ -77,13 +77,13 @@ export class ThreeTexture extends ThreeElement {
         super();
     }
     willConnect() {
-        const src    = this.attr('src')
+        const src = this.attr('src')
         const loader = new THREE.TextureLoader()
         this.texture = loader.load(src)
     }
 }
 
 
-customElements.define('material-mesh-basic',  MeshBasicMaterial);
-customElements.define('material-line-basic',  LineBasicMaterial);
-customElements.define('three-texture',  ThreeTexture);
+customElements.define('material-mesh-basic', MeshBasicMaterial);
+customElements.define('material-line-basic', LineBasicMaterial);
+customElements.define('three-texture', ThreeTexture);

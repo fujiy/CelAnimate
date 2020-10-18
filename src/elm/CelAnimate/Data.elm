@@ -34,7 +34,15 @@ zeroData =
 zeroCel : Cel
 zeroCel =
     { name = "cel"
-    , keyframes = Array.empty
+    , keyframes = Array.fromList [ zeroKeyframe ]
+    }
+
+
+zeroKeyframe : Keyframe
+zeroKeyframe =
+    { name = "keyframe0"
+    , image = ""
+    , mesh = emptyMesh
     }
 
 

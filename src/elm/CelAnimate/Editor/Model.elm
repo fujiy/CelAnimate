@@ -1,5 +1,6 @@
 module CelAnimate.Editor.Model exposing (..)
 
+import Array
 import CelAnimate.Data exposing (..)
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import Math.Vector3 exposing (Vec3, vec3)
@@ -9,6 +10,7 @@ type Msg
     = WindowResized Int Int
     | CanvasPointer CanvasPointerMsg
     | DataTree DataTreeMsg
+    | ToolInput ToolMsg Tool
 
 
 type CanvasPointerMsg
@@ -22,6 +24,13 @@ type DataTreeMsg
     | NewCel Int
 
 
+type ToolMsg
+    = ToolStart
+    | ToolMove
+    | ToolFinish
+    | ToolHover
+
+
 type alias Model =
     { screenSize :
         { width : Int
@@ -32,7 +41,13 @@ type alias Model =
     , toolState : ToolState
     , cursor : Cursor
     , data : Data
-    , dataSelection : Int
+    , dataSelection : DataSelection
+    }
+
+
+type alias DataSelection =
+    { cel : Int
+    , keyframe : Int
     }
 
 
@@ -81,7 +96,7 @@ initCursor =
 
 
 type alias ToolSettings =
-    { polygonDraw : PolygonDraw.Setings }
+    { polygonDraw : PolygonDraw.Settings }
 
 
 initToolSettings : ToolSettings
@@ -103,3 +118,11 @@ viewSize camera distance =
             height * camera.aspect
     in
     { width = width, height = height }
+
+
+currentKeyframe : Model -> Maybe Keyframe
+currentKeyframe model =
+    model.data.cels
+        |> Array.get model.dataSelection.cel
+        |> Maybe.andThen
+            (\cel -> Array.get model.dataSelection.keyframe cel.keyframes)

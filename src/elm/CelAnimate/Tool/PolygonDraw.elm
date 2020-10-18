@@ -10,7 +10,7 @@ import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 
 
-type alias Setings =
+type alias Settings =
     { radius : Float }
 
 
@@ -27,8 +27,17 @@ initState =
     }
 
 
-drawingPolygon : State -> Mesh
-drawingPolygon state =
+start : Settings -> Tool -> Keyframe -> State
+start settings tool keyframe =
+    { kdTree =
+        KdTree.build verticeToArray <|
+            Array.indexedMap Tuple.pair keyframe.mesh.vertices
+    , polygons = keyframe.mesh.faces
+    }
+
+
+progress : State -> Mesh
+progress state =
     { vertices =
         KdTree.toArray state.kdTree
             |> Array.sortBy Tuple.first
@@ -37,8 +46,13 @@ drawingPolygon state =
     }
 
 
-drawPolygons : Setings -> Tool -> State -> State
-drawPolygons settings tool state =
+finish : State -> Keyframe -> Keyframe
+finish state keyframe =
+    { keyframe | mesh = progress state }
+
+
+step : Settings -> Tool -> State -> State
+step settings tool state =
     let
         radius =
             settings.radius

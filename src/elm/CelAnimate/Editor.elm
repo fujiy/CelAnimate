@@ -25,7 +25,7 @@ init _ =
       , toolSettings = initToolSettings
       , cursor = initCursor
       , data = zeroData
-      , dataSelection = 0
+      , dataSelection = DataSelection 0 0
       }
     , Task.perform
         (\{ viewport } ->
@@ -37,13 +37,94 @@ init _ =
     )
 
 
+toolInput : Model -> ToolMsg -> Tool -> Model
+toolInput model msg tool =
+    case model.toolState of
+        PolygonDraw state ->
+            case msg of
+                ToolStart ->
+                    case currentKeyframe model of
+                        Just keyframe ->
+                            { model
+                                | toolState =
+                                    PolygonDraw <|
+                                        PolygonDraw.start
+                                            model.toolSettings.polygonDraw
+                                            tool
+                                            keyframe
+                            }
+
+                        Nothing ->
+                            model
+
+                ToolMove ->
+                    { model
+                        | toolState =
+                            PolygonDraw <|
+                                PolygonDraw.step
+                                    model.toolSettings.polygonDraw
+                                    tool
+                                    state
+                    }
+
+                ToolFinish ->
+                    case currentKeyframe model of
+                        Just keyframe ->
+                            let
+                                data =
+                                    model.data
+
+                                selection =
+                                    model.dataSelection
+
+                                newKeyframe =
+                                    PolygonDraw.finish state keyframe
+
+                                updateKeyframe cel =
+                                    { cel
+                                        | keyframes =
+                                            Array.set selection.keyframe
+                                                newKeyframe
+                                                cel.keyframes
+                                    }
+
+                                cels =
+                                    Array.update selection.cel
+                                        updateKeyframe
+                                        data.cels
+                            in
+                            Debug.log "model"
+                                { model
+                                    | data = { data | cels = cels }
+                                    , toolState =
+                                        PolygonDraw PolygonDraw.initState
+                                }
+
+                        Nothing ->
+                            model
+
+                _ ->
+                    model
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        ToolInput tmsg tool ->
+            ( toolInput model tmsg tool
+            , Cmd.none
+            )
+
         DataTree dt ->
             case dt of
                 SelectCel i ->
-                    ( { model | dataSelection = i }
+                    let
+                        selection =
+                            model.dataSelection
+                    in
+                    ( { model
+                        | dataSelection = { selection | cel = i }
+                      }
                     , Cmd.none
                     )
 
@@ -117,44 +198,32 @@ update msg model =
                     , v = Vec3.vec3 0 1 0
                     }
 
-                newToolState =
-                    case model.toolState of
-                        PolygonDraw state ->
-                            case cmsg of
-                                PointerDown ->
-                                    PolygonDraw <|
-                                        PolygonDraw.drawPolygons
-                                            model.toolSettings.polygonDraw
-                                            tool
-                                            PolygonDraw.initState
+                message =
+                    case cmsg of
+                        PointerDown ->
+                            ToolStart
 
-                                PointerMove _ ->
-                                    if model.cursor.down then
-                                        PolygonDraw <|
-                                            PolygonDraw.drawPolygons
-                                                model.toolSettings.polygonDraw
-                                                tool
-                                                state
+                        PointerUp ->
+                            ToolFinish
 
-                                    else
-                                        model.toolState
+                        PointerMove _ ->
+                            if newCursor.down then
+                                ToolMove
 
-                                PointerUp ->
-                                    PolygonDraw <|
-                                        PolygonDraw.initState
+                            else
+                                ToolHover
             in
             ( { model
                 | cursor = newCursor
-                , toolState = newToolState
               }
-            , Cmd.none
+            , Task.perform identity <| Task.succeed <| ToolInput message tool
             )
 
 
 view : Model -> Html Msg
 view model =
     div [ class "text-white" ]
-        [ dataTree model.data model.dataSelection
+        [ dataTree model.data model.dataSelection.cel
         , cursorView model
         , viewport model
         ]

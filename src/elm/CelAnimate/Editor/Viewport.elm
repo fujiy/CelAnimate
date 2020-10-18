@@ -32,49 +32,51 @@ viewport model =
             , attribute "camera-id" "camera"
             , attribute "background" "#1A202C"
             ]
-            [ node "camera-perspective"
-                [ id "camera"
-                , floatAttr "aspect" model.camera.aspect
-                , floatAttr "fov" model.camera.fov
-                ]
-                []
-            , case model.toolState of
-                PolygonDraw state ->
-                    polygonMesh <| PolygonDraw.drawingPolygon state
-            , node "three-line-segments"
-                [ property "position" <|
-                    encodeVec3 <|
-                        cursorPosition model model.cursor.position
-                ]
-                [ node "geometry-edges"
-                    []
-                    [ node "geometry-circle"
-                        [ floatAttr "radius"
-                            model.toolSettings.polygonDraw.radius
-                        , intAttr "segments" 16
-                        ]
-                        []
+          <|
+            List.append
+                [ node "camera-perspective"
+                    [ id "camera"
+                    , floatAttr "aspect" model.camera.aspect
+                    , floatAttr "fov" model.camera.fov
                     ]
-                , node "material-line-basic" [ attribute "color" "red" ] []
+                    []
+                , case model.toolState of
+                    PolygonDraw state ->
+                        polygonMesh True <| PolygonDraw.progress state
+                , cursor model
                 ]
+                (case currentKeyframe model of
+                    Just keyframe ->
+                        [ polygonMesh False keyframe.mesh ]
 
-            -- , node "three-mesh"
-            --     []
-            --     [ node "geometry-box" [] []
-            --     , node "material-mesh-basic"
-            --         []
-            --         [ node "three-texture"
-            --             [ attribute "src" "../sample/1.png"
-            --             ]
-            --             []
-            --         ]
-            --     ]
-            ]
+                    Nothing ->
+                        []
+                )
         ]
 
 
-polygonMesh : Mesh -> Three msg
-polygonMesh mesh =
+cursor : Model -> Three msg
+cursor model =
+    node "three-line-segments"
+        [ property "position" <|
+            encodeVec3 <|
+                cursorPosition model model.cursor.position
+        ]
+        [ node "geometry-edges"
+            []
+            [ node "geometry-circle"
+                [ floatAttr "radius"
+                    model.toolSettings.polygonDraw.radius
+                , intAttr "segments" 16
+                ]
+                []
+            ]
+        , node "material-line-basic" [ attribute "color" "red" ] []
+        ]
+
+
+polygonMesh : Bool -> Mesh -> Three msg
+polygonMesh colored mesh =
     let
         vertices =
             Encode.array encodeVec3 mesh.vertices
@@ -92,9 +94,8 @@ polygonMesh mesh =
                 ]
                 []
             , Html.node "material-mesh-basic"
-                [ attribute "color" "blue"
+                [ attribute "color" "black"
                 , boolAttr "wireframe" True
-                , floatAttr "linewidth" 2.0
                 ]
                 []
             ]
@@ -106,10 +107,22 @@ polygonMesh mesh =
                 ]
                 []
             , Html.node "material-mesh-basic"
-                [ attribute "color" "cyan"
+                [ attribute "color"
+                    (if colored then
+                        "#4FD1C5"
+
+                     else
+                        "white"
+                    )
                 , boolAttr "wireframe" False
                 , boolAttr "transparent" True
-                , floatAttr "opacity" 0.5
+                , floatAttr "opacity"
+                    (if colored then
+                        0.2
+
+                     else
+                        0.1
+                    )
                 ]
                 []
             ]
