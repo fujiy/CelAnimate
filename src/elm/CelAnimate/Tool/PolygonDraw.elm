@@ -5,26 +5,29 @@ import Array.Extra as Array
 import Array.More as Array
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
-import CelAnimate.Tool exposing (..)
 import KdTree exposing (KdTree)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 
 
-type alias PolygonDrawState =
+type alias Setings =
+    { radius : Float }
+
+
+type alias State =
     { kdTree : KdTree Float ( Int, Vec3 )
     , polygons : Faces
     }
 
 
-initPolygonDrawState : PolygonDrawState
-initPolygonDrawState =
+initState : State
+initState =
     { kdTree = KdTree.empty verticeToArray
     , polygons = Array.empty
     }
 
 
-drawingPolygon : PolygonDrawState -> Mesh
+drawingPolygon : State -> Mesh
 drawingPolygon state =
     { vertices =
         KdTree.toArray state.kdTree
@@ -34,11 +37,11 @@ drawingPolygon state =
     }
 
 
-drawPolygons : ToolSettings -> Tool -> PolygonDrawState -> PolygonDrawState
+drawPolygons : Setings -> Tool -> State -> State
 drawPolygons settings tool state =
     let
         radius =
-            settings.polygonDraw.radius
+            settings.radius
 
         tip =
             Vec3.normalize tool.direction

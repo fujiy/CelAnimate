@@ -1,126 +1,183 @@
 module CelAnimate.Editor exposing (..)
 
-import Array exposing (Array)
+import Array
 import Array.Extra as Array
 import Array.More as Array
+import Browser.Dom exposing (getViewport)
+import Browser.Events exposing (onResize)
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
-import CelAnimate.Tool.PolygonDraw exposing (..)
-import Html exposing (Attribute, Html)
-import Html.Attributes as Attr
-import Json.Encode as Json
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import CelAnimate.Editor.Model exposing (..)
+import CelAnimate.Editor.Outliner exposing (..)
+import CelAnimate.Editor.Viewport exposing (..)
+import CelAnimate.Tool.PolygonDraw as PolygonDraw exposing (..)
+import Html exposing (Html, div)
+import Html.Attributes exposing (class, style)
+import Math.Vector3 as Vec3 exposing (Vec3)
+import Task
 
 
-type alias Three msg =
-    Html msg
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( { screenSize = { width = 800, height = 600 }
+      , camera = initCameraState
+      , toolState = initToolState
+      , toolSettings = initToolSettings
+      , cursor = initCursor
+      , data = zeroData
+      , dataSelection = 0
+      }
+    , Task.perform
+        (\{ viewport } ->
+            WindowResized
+                (round viewport.width)
+                (round viewport.height)
+        )
+        getViewport
+    )
 
 
-type ToolState
-    = PolygonDraw PolygonDrawState
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        DataTree dt ->
+            case dt of
+                SelectCel i ->
+                    ( { model | dataSelection = i }
+                    , Cmd.none
+                    )
+
+                NewCel i ->
+                    let
+                        data =
+                            model.data
+                    in
+                    ( { model
+                        | data =
+                            { data
+                                | cels = Array.insertAt i zeroCel data.cels
+                            }
+                      }
+                    , Cmd.none
+                    )
+
+        WindowResized w h ->
+            let
+                camera =
+                    model.camera
+            in
+            ( { model
+                | screenSize = { width = w, height = h }
+                , camera = { camera | aspect = toFloat w / toFloat h }
+              }
+            , Cmd.none
+            )
+
+        CanvasPointer cmsg ->
+            let
+                cursor =
+                    model.cursor
+
+                ( vx, vy ) =
+                    cursor.velocity
+
+                velocity pos =
+                    ( (Tuple.first pos - Tuple.first cursor.position)
+                        * 0.5
+                        + vx
+                        * 0.5
+                    , (Tuple.second pos - Tuple.second cursor.position)
+                        * 0.5
+                        + vy
+                        * 0.5
+                    )
+
+                newCursor =
+                    case cmsg of
+                        PointerDown ->
+                            { cursor
+                                | down = True
+                            }
+
+                        PointerUp ->
+                            { cursor
+                                | down = False
+                            }
+
+                        PointerMove pos ->
+                            { cursor
+                                | position = pos
+                                , velocity = velocity pos
+                            }
+
+                tool =
+                    { center = cursorPosition model newCursor.position
+                    , direction = cursorVelocity model newCursor.velocity
+                    , u = Vec3.vec3 1 0 0
+                    , v = Vec3.vec3 0 1 0
+                    }
+
+                newToolState =
+                    case model.toolState of
+                        PolygonDraw state ->
+                            case cmsg of
+                                PointerDown ->
+                                    PolygonDraw <|
+                                        PolygonDraw.drawPolygons
+                                            model.toolSettings.polygonDraw
+                                            tool
+                                            PolygonDraw.initState
+
+                                PointerMove _ ->
+                                    if model.cursor.down then
+                                        PolygonDraw <|
+                                            PolygonDraw.drawPolygons
+                                                model.toolSettings.polygonDraw
+                                                tool
+                                                state
+
+                                    else
+                                        model.toolState
+
+                                PointerUp ->
+                                    PolygonDraw <|
+                                        PolygonDraw.initState
+            in
+            ( { model
+                | cursor = newCursor
+                , toolState = newToolState
+              }
+            , Cmd.none
+            )
 
 
-initToolState : ToolState
-initToolState =
-    PolygonDraw initPolygonDrawState
-
-
-type EditorMode
-    = PolygonEdit
-    | MorphingEdit
-
-
-type alias CameraState =
-    { position : Vec3
-    , fov : Float
-    , aspect : Float
-    }
-
-
-initCameraState : CameraState
-initCameraState =
-    { position = vec3 0 0 4
-    , fov = 50
-    , aspect = 1
-    }
-
-
-
-
-polygonMesh : Mesh -> Three msg
-polygonMesh mesh =
-    let
-        vertices =
-            Json.array encodeVec3 mesh.vertices
-
-        faces =
-            Json.array encodeFace mesh.faces
-    in
-    Html.node "three-group"
-        []
-        [ Html.node "three-mesh"
-            []
-            [ Html.node "geometry-buffer"
-                [ Attr.property "vertices" vertices
-                , Attr.property "faces" faces
-                ]
-                []
-            , Html.node "material-mesh-basic"
-                [ Attr.attribute "color" "blue"
-                , boolAttr "wireframe" True
-                , floatAttr "linewidth" 2.0
-                ]
-                []
-            ]
-        , Html.node "three-mesh"
-            []
-            [ Html.node "geometry-buffer"
-                [ Attr.property "vertices" vertices
-                , Attr.property "faces" faces
-                ]
-                []
-            , Html.node "material-mesh-basic"
-                [ Attr.attribute "color" "cyan"
-                , boolAttr "wireframe" False
-                , boolAttr "transparent" True
-                , floatAttr "opacity" 0.5
-                ]
-                [] 
-            ]
+view : Model -> Html Msg
+view model =
+    div [ class "text-white" ]
+        [ dataTree model.data model.dataSelection
+        , cursorView model
+        , viewport model
         ]
 
 
-viewSize : CameraState -> Float -> { width : Float, height : Float }
-viewSize camera distance =
+cursorView : Model -> Html Msg
+cursorView model =
     let
-        vfov =
-            degrees camera.fov
+        ( x, y ) =
+            model.cursor.position
 
-        height =
-            2 * tan (vfov / 2) * distance
-
-        width =
-            height * camera.aspect
+        -- diameter = model.toolSettings.polygonDraw.radius * 2
     in
-    { width = width, height = height }
+    div
+        [ class "cursor-polygon-draw"
+        , style "top" (String.fromFloat y ++ "px")
+        , style "left" (String.fromFloat x ++ "px")
+        , style "width" "20px"
+        , style "height" "20px"
+        ]
+        []
 
 
-intAttr : String -> Int -> Attribute msg
-intAttr name n =
-    Attr.attribute name (String.fromInt n)
-
-
-floatAttr : String -> Float -> Attribute msg
-floatAttr name x =
-    Attr.attribute name (String.fromFloat x)
-
-
-boolAttr : String -> Bool -> Attribute msg
-boolAttr name b =
-    Attr.attribute name
-        (if b then
-            "true"
-
-         else
-            ""
-        )
+subs : Model -> Sub Msg
+subs model =
+    onResize WindowResized

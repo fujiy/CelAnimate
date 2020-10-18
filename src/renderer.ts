@@ -2,6 +2,7 @@ import 'electron'
 
 import './three'
 import './components/treeview'
+import './components/contextmenu'
 import './style/main.sass'
 const { Elm } = require('./elm/Main.elm')
 

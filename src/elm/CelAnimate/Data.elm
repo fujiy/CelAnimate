@@ -2,6 +2,7 @@ module CelAnimate.Data exposing (..)
 
 import Array exposing (Array)
 import CelAnimate.Algebra exposing (..)
+import Math.Vector3 as Vec3 exposing (Vec3)
 
 
 type alias Data =
@@ -27,4 +28,19 @@ zeroData : Data
 zeroData =
     { path = "untitled"
     , cels = Array.empty
+    }
+
+
+zeroCel : Cel
+zeroCel =
+    { name = "cel"
+    , keyframes = Array.empty
+    }
+
+
+type alias Tool =
+    { center : Vec3
+    , direction : Vec3
+    , u : Vec3
+    , v : Vec3
     }

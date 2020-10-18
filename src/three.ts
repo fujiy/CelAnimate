@@ -62,12 +62,17 @@ class ThreeScene extends ThreeObject {
     constructor() {
         super();
         this.object3d = new THREE.Scene();
-        this.object3d.background = new THREE.Color("white");
     }
     static get observedAttributes(): string[] {
         return super.observedAttributes.concat(['camera-id', 'background'])
     }
 
+    attrChanged(name: string, value: any) {
+        switch (name) {
+            case "background":
+                this.object3d.background = new THREE.Color(value);
+        }
+    }
 
     get camera(): ThreeCamera {
         return document.getElementById(

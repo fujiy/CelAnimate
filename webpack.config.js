@@ -14,31 +14,8 @@ const mainConfig = {
     module: {
         rules: [
             {
-                test: /\.s[ac]ss$/i,
-                use: [
-                    'style-loader',
-                    'css-loader',
-                    // "postcss-loader",
-                    'sass-loader',
-                ],
-            },
-            {
-                test:    /\.html$/,
-                exclude: /node_modules/,
-                loader:  'file-loader?name=[name].[ext]',
-            },
-            {
                 test: /\.ts$/,
                 use: 'ts-loader',
-            },
-            
-            {
-                test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-                loader: 'url-loader?limit=10000&mimetype=application/font-woff',
-            },
-            {
-                test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-                loader: 'file-loader',
             },
             {
                 test: /\.html$/,
@@ -75,7 +52,18 @@ const rendererConfig = {
                 use: [
                     'style-loader',
                     'css-loader',
-                    // "postcss-loader",
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                            postcssOptions: {
+                                ident: 'postcss',
+                                plugins: [
+                                    require('tailwindcss'),
+                                    require('autoprefixer'),
+                                ],
+                            },
+                        }
+                    },
                     'sass-loader',
                 ],
             },
