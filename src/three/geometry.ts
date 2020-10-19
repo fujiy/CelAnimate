@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { CircleBufferGeometry } from 'three';
 
-import {ThreeElement} from './element'
+import { ThreeElement } from './element'
 
 export class ThreeGeometry extends ThreeElement {
     geometry: THREE.BufferGeometry = null
@@ -12,7 +12,7 @@ export class ThreeGeometry extends ThreeElement {
 }
 
 export class BufferGeometry extends ThreeGeometry {
-    _vertices : number[][] = []
+    _vertices: number[][] = []
     _faces: number[][] = []
 
     maxVertices: number = 500
@@ -34,7 +34,7 @@ export class BufferGeometry extends ThreeGeometry {
         this._faces = indices
         if (this.geometry) {
             indices.forEach((index, i) => {
-                this.indices.setXYZ(i*3, index[0], index[1], index[2])
+                this.indices.setXYZ(i * 3, index[0], index[1], index[2])
             })
             this.indices.needsUpdate = true
             this.geometry.setDrawRange(0, indices.length * 3)

@@ -1,10 +1,9 @@
-module KdTree exposing (KdTree, PointAsArrayFn, build, empty, inRadius, insertUnbalanced, size, toArray)
+module KdTree exposing (KdTree, PointAsArrayFn, build, empty, inRadius, insertUnbalanced, size, toArray, toList)
 
 import Array exposing (Array)
 import Array.Extra as Array
 import Debug
-import List
-import Maybe exposing (Maybe)
+import Maybe
 
 
 type alias PointAsArrayFn number p =
@@ -127,6 +126,11 @@ insertUnbalanced_ p2a points tn =
 
         Empty n ->
             build_ p2a points n
+
+
+toList : KdTree number p -> List p
+toList =
+    toArray >> Array.toList
 
 
 toArray : KdTree number p -> Array p

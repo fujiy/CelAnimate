@@ -17,6 +17,7 @@ type alias Settings =
 type alias State =
     { kdTree : KdTree Float ( Int, Vec3 )
     , polygons : Faces
+    , drawing : Bool
     }
 
 
@@ -24,6 +25,7 @@ initState : State
 initState =
     { kdTree = KdTree.empty verticeToArray
     , polygons = Array.empty
+    , drawing = False
     }
 
 
@@ -33,6 +35,7 @@ start settings tool keyframe =
         KdTree.build verticeToArray <|
             Array.indexedMap Tuple.pair keyframe.mesh.vertices
     , polygons = keyframe.mesh.faces
+    , drawing = True
     }
 
 
@@ -216,14 +219,11 @@ step settings tool state =
                                                 )
                                                 nears
                                     in
-                                    if intersect then
+                                    if intersect || not (isFront p q new) then
                                         Nothing
 
-                                    else if isFront p q new then
-                                        Just ( i, j, k )
-
                                     else
-                                        Just ( j, i, k )
+                                        Just ( i, j, k )
                                 )
                                 nears
 

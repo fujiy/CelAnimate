@@ -1,5 +1,11 @@
 import 'electron'
 
+require('@fortawesome/fontawesome')
+require('@fortawesome/fontawesome-free-solid')
+require('@fortawesome/fontawesome-free-regular')
+require('@fortawesome/fontawesome-free-brands')
+// require("font-awesome-webpack")
+
 import './three'
 import './components/treeview'
 import './components/contextmenu'

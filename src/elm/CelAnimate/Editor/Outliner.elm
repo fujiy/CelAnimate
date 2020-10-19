@@ -12,11 +12,11 @@ import Html.Events exposing (onClick)
 dataTree : Data -> Int -> Html Msg
 dataTree data selection =
     node "tree-group"
-        [ class "data-tree fixed flex items-center select-none m-1 text-base "
+        [ class "data-tree flex items-center select-none m-1 text-base "
         ]
     <|
-        div [ class "group" ]
-            [ icon "expand_more"
+        div [ class "group pointer-events-auto" ]
+            [ icon "chevron-down"
             , span [ class "bg-gray-700 shadow-lg px-1" ] [ text data.path ]
             , node "context-menu"
                 [ class
@@ -37,11 +37,11 @@ dataTree data selection =
 dataTreeCel : Int -> Bool -> Cel -> Html Msg
 dataTreeCel i isSelected cel =
     node "tree-item"
-        [ class "ml-4"
+        [ class "ml-4 pointer-events-auto"
         , selected isSelected
         , onSelected (\_ -> DataTree <| SelectCel i)
         ]
-        [ icon "layers"
+        [ span [] [ icon "image" ]
         , span
             [ class <|
                 "shadow-lg px-1 "

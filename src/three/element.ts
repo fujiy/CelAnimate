@@ -38,6 +38,8 @@ export class ThreeElement extends HTMLElement {
             }
         })
     }
+
+
     connectedBubble() {
         if (this.childrenCount <= 1) {
             this.didConnect()
@@ -56,6 +58,7 @@ export class ThreeElement extends HTMLElement {
 
 export class ThreeObject extends ThreeElement {
     object3d: THREE.Object3D
+    parent: ThreeObject
 
     constructor() {
         super();
@@ -64,13 +67,22 @@ export class ThreeObject extends ThreeElement {
     static get observedAttributes(): string[] {
         return [];
     }
+    disconnectedCallback() {
+        if (!this.parentElement) {
+            this.parent.object3d.remove(this.object3d)
+        }
+    }
+    adoptedCallback() {
+        console.log("adopted", this)
+    }
 
     didConnect() {
-        if (this.parentElement instanceof ThreeObject) {
-            (this.parentElement as ThreeObject).add(this)
+        if (this.parentElement instanceof ThreeElement) {
+            this.parent = this.parentElement as ThreeObject
+            this.parent.add(this)
         }
         else {
-            console.log("parent element is not a three object",
+            console.log("Parent element is not a three object",
                 this.parentElement, this)
         }
     }

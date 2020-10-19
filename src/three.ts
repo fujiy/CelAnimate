@@ -36,17 +36,17 @@ class ThreeCanvas extends ThreeElement {
 
         var stats = new Stats();
         stats.showPanel(0);
-        document.body.appendChild(stats.dom);
+        // document.body.appendChild(stats.dom);
 
         const animate = () => {
-            stats.begin();
+            // stats.begin();
 
             const scene = this.scene
             const camera = scene.camera
 
             this.renderer.render(scene.object3d, camera.object3d)
 
-            stats.end();
+            // stats.end();
 
             requestAnimationFrame(animate)
         };

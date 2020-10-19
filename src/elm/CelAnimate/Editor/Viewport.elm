@@ -5,7 +5,8 @@ import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
-import Html exposing (Html, node)
+import CelAnimate.Tool.PolygonErase as PolygonErase
+import Html exposing (Html, node, text)
 import Html.Attributes exposing (attribute, height, id, property, width)
 import Html.Events.Extra.Pointer as Pointer
 import Json.Encode as Encode
@@ -42,12 +43,30 @@ viewport model =
                     []
                 , case model.toolState of
                     PolygonDraw state ->
-                        polygonMesh True <| PolygonDraw.progress state
+                        polygonMesh True <|
+                            PolygonDraw.progress state
+
+                    PolygonErase state ->
+                        polygonMesh True <|
+                            PolygonErase.progress state
                 , cursor model
                 ]
                 (case currentKeyframe model of
                     Just keyframe ->
-                        [ polygonMesh False keyframe.mesh ]
+                        let
+                            drawing =
+                                case model.toolState of
+                                    PolygonDraw state ->
+                                        state.drawing
+
+                                    PolygonErase state ->
+                                        state.using
+                        in
+                        if drawing then
+                            []
+
+                        else
+                            [ polygonMesh False keyframe.mesh ]
 
                     Nothing ->
                         []
@@ -118,10 +137,10 @@ polygonMesh colored mesh =
                 , boolAttr "transparent" True
                 , floatAttr "opacity"
                     (if colored then
-                        0.2
+                        0.5
 
                      else
-                        0.1
+                        0.2
                     )
                 ]
                 []

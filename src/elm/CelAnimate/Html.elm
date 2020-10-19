@@ -12,7 +12,11 @@ type alias Three msg =
 
 icon : String -> Html msg
 icon name =
-    i [ class "material-icons" ] [ text name ]
+    i [ class <| "select-none fas fa-" ++ name ] []
+
+
+
+-- i [ class "material-icons" ] [ text name ]
 
 
 onSelected : (Bool -> msg) -> Attribute msg
