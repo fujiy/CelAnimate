@@ -13,16 +13,17 @@ import './three/material'
 class ThreeCanvas extends ThreeElement {
     renderer: THREE.WebGLRenderer
 
+    width: number
+    height: number
+
     constructor() {
         super()
         this.renderer = new THREE.WebGLRenderer()
     }
     static get observedAttributes(): string[] {
-        return ['width', 'height']
+        return ['width', 'height', 'auto-size']
     }
     attrChanged() {
-        this.renderer.setSize(+this.getAttribute('width'),
-            +this.getAttribute('height'))
     }
     get scene(): ThreeScene {
         return document.getElementById(this.getAttribute('scene-id')) as ThreeScene
@@ -31,8 +32,32 @@ class ThreeCanvas extends ThreeElement {
         // nothing to do
     }
 
+    resize(width: number, height: number) {
+        this.width = width
+        this.height = height
+        this.renderer.setSize(width, height)
+    }
+
     didConnect() {
         this.appendChild(this.renderer.domElement)
+        this.renderer.domElement.style.position = "fixed"
+
+        const observer = new window["ResizeObserver"](entries => {
+            const rect = entries[0].contentRect
+            this.resize(rect.width, rect.height)
+
+            const event = new Event("resize")
+            this.dispatchEvent(event)
+        })
+        observer.observe(this)
+
+        if (this.attr("auto-size")) {
+            const rect = this.getBoundingClientRect()
+            this.resize(rect.width, rect.height)
+
+            const event = new Event("resize")
+            this.dispatchEvent(event)
+        }
 
         var stats = new Stats();
         stats.showPanel(0);
@@ -43,6 +68,10 @@ class ThreeCanvas extends ThreeElement {
 
             const scene = this.scene
             const camera = scene.camera
+
+            if (camera.autoAspect) {
+                camera.aspect = this.width / this.height
+            }
 
             this.renderer.render(scene.object3d, camera.object3d)
 

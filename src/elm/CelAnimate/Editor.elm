@@ -4,7 +4,6 @@ import Array
 import Array.Extra as Array
 import Array.More as Array
 import Browser.Dom exposing (getViewport)
-import Browser.Events exposing (onResize)
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
@@ -23,7 +22,7 @@ import Task
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { screenSize = { width = 800, height = 600 }
+    ( { viewportSize = { width = 800, height = 600 }
       , camera = initCameraState
       , toolState = initToolState
       , toolSettings = initToolSettings
@@ -31,13 +30,14 @@ init _ =
       , data = zeroData
       , dataSelection = DataSelection 0 0
       }
-    , Task.perform
-        (\{ viewport } ->
-            WindowResized
-                (round viewport.width)
-                (round viewport.height)
-        )
-        getViewport
+    , Cmd.none
+      -- , Task.perform
+      --     (\{ viewport } ->
+      --         ViewportResized
+      --             (round viewport.width)
+      --             (round viewport.height)
+      --     )
+      -- getViewport
     )
 
 
@@ -280,13 +280,13 @@ update msg model =
                     , Cmd.none
                     )
 
-        WindowResized w h ->
+        ViewportResized w h ->
             let
                 camera =
                     model.camera
             in
             ( { model
-                | screenSize = { width = w, height = h }
+                | viewportSize = { width = w, height = h }
                 , camera = { camera | aspect = toFloat w / toFloat h }
               }
             , Cmd.none
@@ -360,13 +360,9 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div [ class "text-white" ]
-        [ div [ class "fixed flex flex-row pointer-events-none" ]
-            [ toolBar model
-            , dataTree model.data model.dataSelection.cel
-            ]
-
-        -- , cursorView model
+    div [ class "fixed flex flex-row w-screen text-white" ]
+        [ toolBar model
+        , dataTree model.data model.dataSelection.cel
         , viewport model
         ]
 
@@ -388,7 +384,7 @@ toolBar model =
     div
         [ class <|
             "h-screen w-8 bg-gray-700 flex flex-col text-xl select-none "
-                ++ "pointer-events-auto"
+                ++ "pointer-events-auto flex-grow-0 flex-shrink-0"
         ]
         [ toolIcon "arrows-alt" (tool == 0) <|
             PolygonMove PolygonMove.initState
@@ -435,4 +431,4 @@ cursorView model =
 
 subs : Model -> Sub Msg
 subs model =
-    onResize WindowResized
+    Sub.none

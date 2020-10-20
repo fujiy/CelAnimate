@@ -8,7 +8,7 @@ import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
 import Html exposing (Html, node, text)
-import Html.Attributes exposing (attribute, height, id, property, width)
+import Html.Attributes exposing (attribute, class, id, property)
 import Html.Events.Extra.Pointer as Pointer
 import Json.Encode as Encode
 import Math.Vector3 as Vec3 exposing (Vec3)
@@ -17,9 +17,9 @@ import Math.Vector3 as Vec3 exposing (Vec3)
 viewport : Model -> Html Msg
 viewport model =
     node "three-canvas"
-        [ width model.screenSize.width
-        , height model.screenSize.height
-        , attribute "scene-id" "scene"
+        [ attribute "scene-id" "scene"
+        , boolAttr "auto-size" True
+        , class "flex-grow flex-shrink"
         , Pointer.onMove
             (\event ->
                 CanvasPointer <|
@@ -28,6 +28,10 @@ viewport model =
         , Pointer.onDown (\_ -> CanvasPointer PointerDown)
         , Pointer.onUp (\_ -> CanvasPointer PointerUp)
         , Pointer.onCancel (\_ -> CanvasPointer PointerUp)
+        , onResize
+            (\rect ->
+                ViewportResized (round rect.width) (round rect.height)
+            )
         ]
         [ node "three-scene"
             [ id "scene"
@@ -38,7 +42,7 @@ viewport model =
             List.append
                 [ node "camera-perspective"
                     [ id "camera"
-                    , floatAttr "aspect" model.camera.aspect
+                    , boolAttr "auto-aspect" True
                     , floatAttr "fov" model.camera.fov
                     ]
                     []
@@ -163,8 +167,8 @@ cursorPosition model ( cx, cy ) =
             viewSize model.camera (Vec3.length model.camera.position)
 
         ( w, h ) =
-            ( toFloat model.screenSize.width
-            , toFloat model.screenSize.height
+            ( toFloat model.viewportSize.width
+            , toFloat model.viewportSize.height
             )
 
         -- ( cx, cy ) =
@@ -185,8 +189,8 @@ cursorVelocity model ( vx, vy ) =
             viewSize model.camera (Vec3.length model.camera.position)
 
         ( w, h ) =
-            ( toFloat model.screenSize.width
-            , toFloat model.screenSize.height
+            ( toFloat model.viewportSize.width
+            , toFloat model.viewportSize.height
             )
 
         -- ( cx, cy ) =

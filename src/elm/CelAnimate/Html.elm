@@ -1,5 +1,6 @@
 module CelAnimate.Html exposing (..)
 
+import DOM exposing (..)
 import Html exposing (Attribute, Html, i, text)
 import Html.Attributes exposing (attribute, class)
 import Html.Events exposing (on)
@@ -15,10 +16,6 @@ icon name =
     i [ class <| "select-none fas fa-" ++ name ] []
 
 
-
--- i [ class "material-icons" ] [ text name ]
-
-
 onSelected : (Bool -> msg) -> Attribute msg
 onSelected tagger =
     on "change" (Decode.map tagger targetSelected)
@@ -27,6 +24,11 @@ onSelected tagger =
 targetSelected : Decode.Decoder Bool
 targetSelected =
     Decode.at [ "target", "selected" ] Decode.bool
+
+
+onResize : (Rectangle -> msg) -> Attribute msg
+onResize tagger =
+    on "resize" (Decode.map tagger <| target boundingClientRect)
 
 
 intAttr : String -> Int -> Attribute msg

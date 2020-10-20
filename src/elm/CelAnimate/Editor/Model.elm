@@ -9,7 +9,7 @@ import Math.Vector3 exposing (Vec3, vec3)
 
 
 type Msg
-    = WindowResized Int Int
+    = ViewportResized Int Int
     | CanvasPointer CanvasPointerMsg
     | DataTree DataTreeMsg
     | ToolInput ToolMsg Tool
@@ -35,7 +35,7 @@ type ToolMsg
 
 
 type alias Model =
-    { screenSize :
+    { viewportSize :
         { width : Int
         , height : Int
         }
