@@ -13,6 +13,7 @@ import CelAnimate.Editor.Viewport exposing (..)
 import CelAnimate.Html exposing (..)
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
+import CelAnimate.Tool.PolygonMove as PolygonMove
 import Html exposing (Html, button, div)
 import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
@@ -173,6 +174,71 @@ toolInput model msg tool =
                 _ ->
                     model
 
+        PolygonMove state ->
+            case msg of
+                ToolStart ->
+                    case currentKeyframe model of
+                        Just keyframe ->
+                            { model
+                                | toolState =
+                                    PolygonMove <|
+                                        PolygonMove.start
+                                            model.toolSettings.polygonMove
+                                            tool
+                                            keyframe
+                            }
+
+                        Nothing ->
+                            model
+
+                ToolMove ->
+                    { model
+                        | toolState =
+                            PolygonMove <|
+                                PolygonMove.step
+                                    model.toolSettings.polygonMove
+                                    tool
+                                    state
+                    }
+
+                ToolFinish ->
+                    case currentKeyframe model of
+                        Just keyframe ->
+                            let
+                                data =
+                                    model.data
+
+                                selection =
+                                    model.dataSelection
+
+                                newKeyframe =
+                                    PolygonMove.finish state keyframe
+
+                                updateKeyframe cel =
+                                    { cel
+                                        | keyframes =
+                                            Array.set selection.keyframe
+                                                newKeyframe
+                                                cel.keyframes
+                                    }
+
+                                cels =
+                                    Array.update selection.cel
+                                        updateKeyframe
+                                        data.cels
+                            in
+                            { model
+                                | data = { data | cels = cels }
+                                , toolState =
+                                    PolygonMove PolygonMove.initState
+                            }
+
+                        Nothing ->
+                            model
+
+                _ ->
+                    model
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -194,12 +260,11 @@ update msg model =
                         selection =
                             model.dataSelection
                     in
-                    Debug.log "state"
-                        ( { model
-                            | dataSelection = { selection | cel = i }
-                          }
-                        , Cmd.none
-                        )
+                    ( { model
+                        | dataSelection = { selection | cel = i }
+                      }
+                    , Cmd.none
+                    )
 
                 NewCel i ->
                     let
@@ -311,20 +376,25 @@ toolBar model =
     let
         tool =
             case model.toolState of
-                PolygonDraw _ ->
+                PolygonMove _ ->
                     0
 
-                PolygonErase _ ->
+                PolygonDraw _ ->
                     1
+
+                PolygonErase _ ->
+                    2
     in
     div
         [ class <|
             "h-screen w-8 bg-gray-700 flex flex-col text-xl select-none "
                 ++ "pointer-events-auto"
         ]
-        [ toolIcon "paint-brush" (tool == 0) <|
+        [ toolIcon "arrows-alt" (tool == 0) <|
+            PolygonMove PolygonMove.initState
+        , toolIcon "paint-brush" (tool == 1) <|
             PolygonDraw PolygonDraw.initState
-        , toolIcon "eraser" (tool == 1) <|
+        , toolIcon "eraser" (tool == 2) <|
             PolygonErase PolygonErase.initState
         ]
 

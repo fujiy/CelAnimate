@@ -4,6 +4,7 @@ import Array
 import CelAnimate.Data exposing (..)
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
+import CelAnimate.Tool.PolygonMove as PolygonMove
 import Math.Vector3 exposing (Vec3, vec3)
 
 
@@ -56,6 +57,7 @@ type alias DataSelection =
 type ToolState
     = PolygonDraw PolygonDraw.State
     | PolygonErase PolygonErase.State
+    | PolygonMove PolygonMove.State
 
 
 initToolState : ToolState
@@ -101,6 +103,7 @@ initCursor =
 type alias ToolSettings =
     { polygonDraw : PolygonDraw.Settings
     , polygonErase : PolygonErase.Settings
+    , polygonMove : PolygonMove.Settings
     }
 
 
@@ -108,6 +111,7 @@ initToolSettings : ToolSettings
 initToolSettings =
     { polygonDraw = { radius = 0.1 }
     , polygonErase = { radius = 0.1 }
+    , polygonMove = { radius = 0.1 }
     }
 
 

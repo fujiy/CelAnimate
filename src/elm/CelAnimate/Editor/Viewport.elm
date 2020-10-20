@@ -6,6 +6,7 @@ import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
+import CelAnimate.Tool.PolygonMove as PolygonMove
 import Html exposing (Html, node, text)
 import Html.Attributes exposing (attribute, height, id, property, width)
 import Html.Events.Extra.Pointer as Pointer
@@ -49,6 +50,10 @@ viewport model =
                     PolygonErase state ->
                         polygonMesh True <|
                             PolygonErase.progress state
+
+                    PolygonMove state ->
+                        polygonMesh True <|
+                            PolygonMove.progress state
                 , cursor model
                 ]
                 (case currentKeyframe model of
@@ -60,6 +65,9 @@ viewport model =
                                         state.drawing
 
                                     PolygonErase state ->
+                                        state.using
+
+                                    PolygonMove state ->
                                         state.using
                         in
                         if drawing then
@@ -90,7 +98,7 @@ cursor model =
                 ]
                 []
             ]
-        , node "material-line-basic" [ attribute "color" "red" ] []
+        , node "material-line-basic" [ attribute "color" "white" ] []
         ]
 
 

@@ -55,6 +55,11 @@ sqrt3p2 =
     sqrt 3 / 2
 
 
+zero : Vec3
+zero =
+    Vec3.vec3 0 0 0
+
+
 theta : Vec3 -> Vec3 -> Float
 theta u v =
     acos (Vec3.dot u v / (Vec3.length u * Vec3.length v))

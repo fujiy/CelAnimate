@@ -1,7 +1,7 @@
 
 const path = require('path')
 const electron = require('electron')
-const {app, BrowserWindow} = require('electron');
+const { app, BrowserWindow } = require('electron');
 
 let mainWindow
 
@@ -24,6 +24,7 @@ let mainWindow
 app.on('window-all-closed', function() {
     if (process.platform !== 'darwin') {
         app.quit();
+
     }
 });
 
