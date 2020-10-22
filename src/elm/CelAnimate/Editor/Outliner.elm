@@ -1,12 +1,14 @@
 module CelAnimate.Editor.Outliner exposing (..)
 
+import Array
 import Array.Extra as Array
 import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
-import Html exposing (Html, div, node, p, span, text)
-import Html.Attributes exposing (class, selected)
+import Html exposing (Html, div, input, label, node, p, span, text)
+import Html.Attributes exposing (class, selected, type_)
 import Html.Events exposing (onClick)
+import Set
 
 
 dataTree : Data -> Int -> Html Msg

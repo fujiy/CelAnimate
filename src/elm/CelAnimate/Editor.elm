@@ -8,11 +8,13 @@ import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Editor.Outliner exposing (..)
+import CelAnimate.Editor.Timeline exposing (..)
 import CelAnimate.Editor.Viewport exposing (..)
 import CelAnimate.Html exposing (..)
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
+import Dict
 import Html exposing (Html, button, div)
 import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
@@ -29,6 +31,7 @@ init _ =
       , cursor = initCursor
       , data = zeroData
       , dataSelection = DataSelection 0 0
+      , parameters = Dict.empty
       }
     , Cmd.none
       -- , Task.perform
@@ -241,10 +244,10 @@ toolInput model msg tool =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        ToolInput tmsg tool ->
-            ( toolInput model tmsg tool
+update message model =
+    case message of
+        ToolInput msg tool ->
+            ( toolInput model msg tool
             , Cmd.none
             )
 
@@ -280,6 +283,34 @@ update msg model =
                     , Cmd.none
                     )
 
+        Parameters msg ->
+            case msg of
+                SetValue o ->
+                    ( { model
+                        | parameters =
+                            Dict.insert o.name o.value model.parameters
+                      }
+                    , Cmd.none
+                    )
+
+                ParameterUse o ->
+                    let
+                        updateCel cel =
+                            { cel
+                                | parameters =
+                                    if o.use then
+                                        Dict.insert o.desc.name
+                                            o.desc
+                                            cel.parameters
+
+                                    else
+                                        Dict.remove o.desc.name cel.parameters
+                            }
+                    in
+                    ( updateCurrentCel updateCel model
+                    , Cmd.none
+                    )
+
         ViewportResized w h ->
             let
                 camera =
@@ -292,7 +323,7 @@ update msg model =
             , Cmd.none
             )
 
-        CanvasPointer cmsg ->
+        CanvasPointer msg ->
             let
                 cursor =
                     model.cursor
@@ -312,7 +343,7 @@ update msg model =
                     )
 
                 newCursor =
-                    case cmsg of
+                    case msg of
                         PointerDown ->
                             { cursor
                                 | down = True
@@ -336,8 +367,8 @@ update msg model =
                     , v = Vec3.vec3 0 1 0
                     }
 
-                message =
-                    case cmsg of
+                toolMsg =
+                    case msg of
                         PointerDown ->
                             ToolStart
 
@@ -354,16 +385,21 @@ update msg model =
             ( { model
                 | cursor = newCursor
               }
-            , Task.perform identity <| Task.succeed <| ToolInput message tool
+            , Task.perform identity <| Task.succeed <| ToolInput toolMsg tool
             )
 
 
 view : Model -> Html Msg
 view model =
-    div [ class "fixed flex flex-row w-screen text-white" ]
+    div [ class "flex flex-row w-screen text-white select-none" ]
         [ toolBar model
-        , dataTree model.data model.dataSelection.cel
-        , viewport model
+        , div [ class "flex flex-col flex-grow flex-shrink" ]
+            [ div [ class "flex flex-row flex-grow flex-shrink" ]
+                [ dataTree model.data model.dataSelection.cel
+                , viewport model
+                ]
+            , timeline model.parameters <| currentCel model
+            ]
         ]
 
 

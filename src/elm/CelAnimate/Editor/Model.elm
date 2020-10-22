@@ -1,6 +1,7 @@
 module CelAnimate.Editor.Model exposing (..)
 
 import Array
+import Array.Extra as Array
 import CelAnimate.Data exposing (..)
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
@@ -12,6 +13,7 @@ type Msg
     = ViewportResized Int Int
     | CanvasPointer CanvasPointerMsg
     | DataTree DataTreeMsg
+    | Parameters ParameterMsg
     | ToolInput ToolMsg Tool
     | ToolChange ToolState
 
@@ -25,6 +27,11 @@ type CanvasPointerMsg
 type DataTreeMsg
     = SelectCel Int
     | NewCel Int
+
+
+type ParameterMsg
+    = ParameterUse { desc : ParameterDesc, use : Bool }
+    | SetValue { name : String, value : Float }
 
 
 type ToolMsg
@@ -45,6 +52,7 @@ type alias Model =
     , cursor : Cursor
     , data : Data
     , dataSelection : DataSelection
+    , parameters : ParameterVector
     }
 
 
@@ -130,9 +138,29 @@ viewSize camera distance =
     { width = width, height = height }
 
 
-currentKeyframe : Model -> Maybe Keyframe
-currentKeyframe model =
+currentCel : Model -> Maybe Cel
+currentCel model =
     model.data.cels
         |> Array.get model.dataSelection.cel
+
+
+updateCurrentCel : (Cel -> Cel) -> Model -> Model
+updateCurrentCel f model =
+    let
+        data =
+            model.data
+    in
+    { model
+        | data =
+            { data
+                | cels =
+                    Array.update model.dataSelection.cel f data.cels
+            }
+    }
+
+
+currentKeyframe : Model -> Maybe Keyframe
+currentKeyframe model =
+    currentCel model
         |> Maybe.andThen
             (\cel -> Array.get model.dataSelection.keyframe cel.keyframes)

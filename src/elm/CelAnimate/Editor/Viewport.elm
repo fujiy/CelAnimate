@@ -46,6 +46,7 @@ viewport model =
                     , floatAttr "fov" model.camera.fov
                     ]
                     []
+                , node "axes-helper" [] []
                 , case model.toolState of
                     PolygonDraw state ->
                         polygonMesh True <|
