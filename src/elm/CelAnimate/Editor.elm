@@ -7,18 +7,23 @@ import Browser.Dom exposing (getViewport)
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
-import CelAnimate.Editor.Outliner exposing (..)
-import CelAnimate.Editor.Timeline exposing (..)
-import CelAnimate.Editor.Viewport exposing (..)
+import CelAnimate.Editor.Outliner as Outliner
+import CelAnimate.Editor.Property as PropertyEditor
+import CelAnimate.Editor.Timeline as Timeline
+import CelAnimate.Editor.Viewport as Viewport
 import CelAnimate.Html exposing (..)
+import CelAnimate.Tool as Tool
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
 import Dict
+import File
+import File.Select as Select
 import Html exposing (Html, button, div)
 import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
 import Math.Vector3 as Vec3 exposing (Vec3)
+import Platform.Cmd
 import Task
 
 
@@ -44,272 +49,50 @@ init _ =
     )
 
 
-toolInput : Model -> ToolMsg -> Tool -> Model
-toolInput model msg tool =
-    case model.toolState of
-        PolygonDraw state ->
-            case msg of
-                ToolStart ->
-                    case currentKeyframe model of
-                        Just keyframe ->
-                            { model
-                                | toolState =
-                                    PolygonDraw <|
-                                        PolygonDraw.start
-                                            model.toolSettings.polygonDraw
-                                            tool
-                                            keyframe
-                            }
-
-                        Nothing ->
-                            model
-
-                ToolMove ->
-                    { model
-                        | toolState =
-                            PolygonDraw <|
-                                PolygonDraw.step
-                                    model.toolSettings.polygonDraw
-                                    tool
-                                    state
-                    }
-
-                ToolFinish ->
-                    case currentKeyframe model of
-                        Just keyframe ->
-                            let
-                                data =
-                                    model.data
-
-                                selection =
-                                    model.dataSelection
-
-                                newKeyframe =
-                                    PolygonDraw.finish state keyframe
-
-                                updateKeyframe cel =
-                                    { cel
-                                        | keyframes =
-                                            Array.set selection.keyframe
-                                                newKeyframe
-                                                cel.keyframes
-                                    }
-
-                                cels =
-                                    Array.update selection.cel
-                                        updateKeyframe
-                                        data.cels
-                            in
-                            { model
-                                | data = { data | cels = cels }
-                                , toolState =
-                                    PolygonDraw PolygonDraw.initState
-                            }
-
-                        Nothing ->
-                            model
-
-                _ ->
-                    model
-
-        PolygonErase state ->
-            case msg of
-                ToolStart ->
-                    case currentKeyframe model of
-                        Just keyframe ->
-                            { model
-                                | toolState =
-                                    PolygonErase <|
-                                        PolygonErase.start
-                                            model.toolSettings.polygonErase
-                                            tool
-                                            keyframe
-                            }
-
-                        Nothing ->
-                            model
-
-                ToolMove ->
-                    { model
-                        | toolState =
-                            PolygonErase <|
-                                PolygonErase.step
-                                    model.toolSettings.polygonErase
-                                    tool
-                                    state
-                    }
-
-                ToolFinish ->
-                    case currentKeyframe model of
-                        Just keyframe ->
-                            let
-                                data =
-                                    model.data
-
-                                selection =
-                                    model.dataSelection
-
-                                newKeyframe =
-                                    PolygonErase.finish state keyframe
-
-                                updateKeyframe cel =
-                                    { cel
-                                        | keyframes =
-                                            Array.set selection.keyframe
-                                                newKeyframe
-                                                cel.keyframes
-                                    }
-
-                                cels =
-                                    Array.update selection.cel
-                                        updateKeyframe
-                                        data.cels
-                            in
-                            { model
-                                | data = { data | cels = cels }
-                                , toolState =
-                                    PolygonErase PolygonErase.initState
-                            }
-
-                        Nothing ->
-                            model
-
-                _ ->
-                    model
-
-        PolygonMove state ->
-            case msg of
-                ToolStart ->
-                    case currentKeyframe model of
-                        Just keyframe ->
-                            { model
-                                | toolState =
-                                    PolygonMove <|
-                                        PolygonMove.start
-                                            model.toolSettings.polygonMove
-                                            tool
-                                            keyframe
-                            }
-
-                        Nothing ->
-                            model
-
-                ToolMove ->
-                    { model
-                        | toolState =
-                            PolygonMove <|
-                                PolygonMove.step
-                                    model.toolSettings.polygonMove
-                                    tool
-                                    state
-                    }
-
-                ToolFinish ->
-                    case currentKeyframe model of
-                        Just keyframe ->
-                            let
-                                data =
-                                    model.data
-
-                                selection =
-                                    model.dataSelection
-
-                                newKeyframe =
-                                    PolygonMove.finish state keyframe
-
-                                updateKeyframe cel =
-                                    { cel
-                                        | keyframes =
-                                            Array.set selection.keyframe
-                                                newKeyframe
-                                                cel.keyframes
-                                    }
-
-                                cels =
-                                    Array.update selection.cel
-                                        updateKeyframe
-                                        data.cels
-                            in
-                            { model
-                                | data = { data | cels = cels }
-                                , toolState =
-                                    PolygonMove PolygonMove.initState
-                            }
-
-                        Nothing ->
-                            model
-
-                _ ->
-                    model
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
-        ToolInput msg tool ->
-            ( toolInput model msg tool
+        SelectData selection ->
+            ( { model | dataSelection = selection }, Cmd.none )
+
+        ModifyData modify ->
+            ( { model | data = modify model.data }, Cmd.none )
+
+        ChangeParameter desc value ->
+            ( { model
+                | parameters =
+                    Dict.insert desc.name value model.parameters
+              }
             , Cmd.none
             )
 
         ToolChange state ->
-            ( { model | toolState = state }
+            ( { model | toolState = state }, Cmd.none )
+
+        ToolInput msg ->
+            let
+                result =
+                    Tool.input model.toolSettings
+                        model.toolState
+                        msg
+                        model.dataSelection
+                        model.data
+            in
+            ( { model
+                | toolState = result.progress
+                , data = Maybe.withDefault model.data result.commit
+              }
             , Cmd.none
             )
 
-        DataTree dt ->
-            case dt of
-                SelectCel i ->
-                    let
-                        selection =
-                            model.dataSelection
-                    in
-                    ( { model
-                        | dataSelection = { selection | cel = i }
-                      }
-                    , Cmd.none
-                    )
-
-                NewCel i ->
-                    let
-                        data =
-                            model.data
-                    in
-                    ( { model
-                        | data =
-                            { data
-                                | cels = Array.insertAt i zeroCel data.cels
-                            }
-                      }
-                    , Cmd.none
-                    )
-
-        Parameters msg ->
-            case msg of
-                SetValue o ->
-                    ( { model
-                        | parameters =
-                            Dict.insert o.name o.value model.parameters
-                      }
-                    , Cmd.none
-                    )
-
-                ParameterUse o ->
-                    let
-                        updateCel cel =
-                            { cel
-                                | parameters =
-                                    if o.use then
-                                        Dict.insert o.desc.name
-                                            o.desc
-                                            cel.parameters
-
-                                    else
-                                        Dict.remove o.desc.name cel.parameters
-                            }
-                    in
-                    ( updateCurrentCel updateCel model
-                    , Cmd.none
-                    )
+        Pointer pe event ->
+            let
+                ( cursor, tmsg ) =
+                    Tool.pointer pe event model
+            in
+            ( { model | cursor = cursor }
+            , Task.perform (\_ -> ToolInput tmsg) (Task.succeed ())
+            )
 
         ViewportResized w h ->
             let
@@ -323,69 +106,40 @@ update message model =
             , Cmd.none
             )
 
-        CanvasPointer msg ->
-            let
-                cursor =
-                    model.cursor
-
-                ( vx, vy ) =
-                    cursor.velocity
-
-                velocity pos =
-                    ( (Tuple.first pos - Tuple.first cursor.position)
-                        * 0.5
-                        + vx
-                        * 0.5
-                    , (Tuple.second pos - Tuple.second cursor.position)
-                        * 0.5
-                        + vy
-                        * 0.5
+        FileAction msg ->
+            case msg of
+                FileSelect ->
+                    let
+                        load file =
+                            file
+                    in
+                    ( model
+                    , Cmd.map (FileAction << FileSelected) <|
+                        Select.file [ "image/jpeg image/png" ] load
                     )
 
-                newCursor =
-                    case msg of
-                        PointerDown ->
-                            { cursor
-                                | down = True
-                            }
+                FileSelected file ->
+                    ( model
+                    , File.toUrl file
+                        |> Task.perform (FileLoaded file >> FileAction)
+                    )
 
-                        PointerUp ->
-                            { cursor
-                                | down = False
-                            }
+                FileLoaded file url ->
+                    ( { model
+                        | data =
+                            updateKeyframe model.dataSelection
+                                (\keyframe -> { keyframe | image = Just ( file, url ) })
+                                model.data
+                      }
+                    , Cmd.none
+                    )
 
-                        PointerMove pos ->
-                            { cursor
-                                | position = pos
-                                , velocity = velocity pos
-                            }
-
-                tool =
-                    { center = cursorPosition model newCursor.position
-                    , direction = cursorVelocity model newCursor.velocity
-                    , u = Vec3.vec3 1 0 0
-                    , v = Vec3.vec3 0 1 0
-                    }
-
-                toolMsg =
-                    case msg of
-                        PointerDown ->
-                            ToolStart
-
-                        PointerUp ->
-                            ToolFinish
-
-                        PointerMove _ ->
-                            if newCursor.down then
-                                ToolMove
-
-                            else
-                                ToolHover
-            in
-            ( { model
-                | cursor = newCursor
-              }
-            , Task.perform identity <| Task.succeed <| ToolInput toolMsg tool
+        Batch a b ->
+            ( model
+            , Cmd.batch
+                [ Task.perform (\_ -> a) (Task.succeed ())
+                , Task.perform (\_ -> b) (Task.succeed ())
+                ]
             )
 
 
@@ -395,10 +149,11 @@ view model =
         [ toolBar model
         , div [ class "flex flex-col flex-grow flex-shrink" ]
             [ div [ class "flex flex-row flex-grow flex-shrink" ]
-                [ dataTree model.data model.dataSelection.cel
-                , viewport model
+                [ Outliner.view model.data model.dataSelection
+                , Viewport.view model
+                , PropertyEditor.view model.dataSelection model.data
                 ]
-            , timeline model.parameters <| currentCel model
+            , Timeline.view model.parameters model.dataSelection model.data
             ]
         ]
 

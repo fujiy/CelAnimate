@@ -1,33 +1,34 @@
-module CelAnimate.Editor.Viewport exposing (..)
+module CelAnimate.Editor.Viewport exposing (view)
 
+import Array exposing (Array)
+import Array.Extra as Array
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
+import CelAnimate.Tool as Tool
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
+import Dict
 import Html exposing (Html, node, text)
 import Html.Attributes exposing (attribute, class, id, property)
 import Html.Events.Extra.Pointer as Pointer
 import Json.Encode as Encode
-import Math.Vector3 as Vec3 exposing (Vec3)
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import Maybe.Extra as Maybe
 
 
-viewport : Model -> Html Msg
-viewport model =
+view : Model -> Html Msg
+view model =
     node "three-canvas"
         [ attribute "scene-id" "scene"
         , boolAttr "auto-size" True
         , class "flex-grow flex-shrink"
-        , Pointer.onMove
-            (\event ->
-                CanvasPointer <|
-                    PointerMove event.pointer.offsetPos
-            )
-        , Pointer.onDown (\_ -> CanvasPointer PointerDown)
-        , Pointer.onUp (\_ -> CanvasPointer PointerUp)
-        , Pointer.onCancel (\_ -> CanvasPointer PointerUp)
+        , Pointer.onMove <| Pointer PointerMove
+        , Pointer.onDown <| Pointer PointerDown
+        , Pointer.onUp <| Pointer PointerUp
+        , Pointer.onCancel <| Pointer PointerCancel
         , onResize
             (\rect ->
                 ViewportResized (round rect.width) (round rect.height)
@@ -40,13 +41,8 @@ viewport model =
             ]
           <|
             List.append
-                [ node "camera-perspective"
-                    [ id "camera"
-                    , boolAttr "auto-aspect" True
-                    , floatAttr "fov" model.camera.fov
-                    ]
-                    []
-                , node "axes-helper" [] []
+                [ camera model.camera
+                , body model.dataSelection model.parameters model.data.cels
                 , case model.toolState of
                     PolygonDraw state ->
                         polygonMesh True <|
@@ -59,9 +55,9 @@ viewport model =
                     PolygonMove state ->
                         polygonMesh True <|
                             PolygonMove.progress state
-                , cursor model
+                , cursorObject model
                 ]
-                (case currentKeyframe model of
+                (case selectedKeyframe model.dataSelection model.data of
                     Just keyframe ->
                         let
                             drawing =
@@ -87,12 +83,55 @@ viewport model =
         ]
 
 
-cursor : Model -> Three msg
-cursor model =
+body : DataSelection -> ParameterVector -> Array Cel -> Three msg
+body selection pv cels =
+    let
+        pitch =
+            Dict.get "pitch" pv |> Maybe.unwrap 0 degrees
+
+        yaw =
+            Dict.get "yaw" pv |> Maybe.unwrap 0 degrees
+
+        roll =
+            Dict.get "roll" pv |> Maybe.unwrap 0 degrees
+    in
+    node "three-group"
+        [ rotation <| vec3 pitch yaw roll ]
+    <|
+        List.append
+            [ node "axes-helper" [] [] ]
+        <|
+            Array.mapToList (celObject selection) cels
+
+
+celObject : DataSelection -> Cel -> Three msg
+celObject selection cel =
+    maybe
+        (Array.get selection.keyframe cel.keyframes
+            |> Maybe.map
+                (\keyframe ->
+                    polygonMesh False keyframe.mesh
+                )
+        )
+
+
+camera : CameraState -> Three msg
+camera state =
+    node "camera-perspective"
+        [ id "camera"
+        , boolAttr "auto-aspect" True
+        , floatAttr "fov" state.fov
+        , position state.position
+        , lookAt state.lookAt
+        ]
+        []
+
+
+cursorObject : Model -> Three msg
+cursorObject model =
     node "three-line-segments"
-        [ property "position" <|
-            encodeVec3 <|
-                cursorPosition model model.cursor.position
+        [ position <|
+            cursorPosition model model.cursor.position
         ]
         [ node "geometry-edges"
             []
@@ -159,47 +198,3 @@ polygonMesh colored mesh =
                 []
             ]
         ]
-
-
-cursorPosition : Model -> ( Float, Float ) -> Vec3
-cursorPosition model ( cx, cy ) =
-    let
-        size =
-            viewSize model.camera (Vec3.length model.camera.position)
-
-        ( w, h ) =
-            ( toFloat model.viewportSize.width
-            , toFloat model.viewportSize.height
-            )
-
-        -- ( cx, cy ) =
-        --     cursor.position
-        x =
-            (cx - w / 2) / w * size.width / 2
-
-        y =
-            (h / 2 - cy) / h * size.height / 2
-    in
-    Vec3.vec3 x y 0
-
-
-cursorVelocity : Model -> ( Float, Float ) -> Vec3
-cursorVelocity model ( vx, vy ) =
-    let
-        size =
-            viewSize model.camera (Vec3.length model.camera.position)
-
-        ( w, h ) =
-            ( toFloat model.viewportSize.width
-            , toFloat model.viewportSize.height
-            )
-
-        -- ( cx, cy ) =
-        --     cursor.position
-        x =
-            vx / w * size.width / 2
-
-        y =
-            (0 - vy) / h * size.height / 2
-    in
-    Vec3.vec3 vx (0 - vy) 0

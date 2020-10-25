@@ -8,11 +8,16 @@ import CelAnimate.Html exposing (..)
 import Html exposing (Html, div, input, label, node, p, span, text)
 import Html.Attributes exposing (class, selected, type_)
 import Html.Events exposing (onClick)
-import Set
+import Html.Lazy exposing (lazy, lazy2)
 
 
-dataTree : Data -> Int -> Html Msg
-dataTree data selection =
+
+-- view : Data -> DataSelection -> Html Msg
+-- view = lazy2 view_
+
+
+view : Data -> DataSelection -> Html Msg
+view data selection =
     node "tree-group"
         [ class <|
             "data-tree flex items-center select-none p-1 text-base "
@@ -29,32 +34,48 @@ dataTree data selection =
                 ]
                 [ p
                     [ class "hover:bg-gray-800 p-1"
-                    , onClick <| DataTree (NewCel 0)
+                    , onClick <| ModifyData newCel
                     ]
                     [ text "New Cel" ]
                 ]
             ]
             :: Array.indexedMapToList
-                (\i d -> dataTreeCel i (i == selection) d)
+                (\i cel -> celView selection i cel)
                 data.cels
 
 
-dataTreeCel : Int -> Bool -> Cel -> Html Msg
-dataTreeCel i isSelected cel =
+celView : DataSelection -> Int -> Cel -> Html Msg
+celView selection i cel =
     node "tree-item"
         [ class <|
             "ml-4 pointer-events-auto "
-                ++ (if isSelected then
+                ++ (if selection.cel == i then
                         "bg-teal-700"
 
                     else
                         ""
                    )
-        , selected isSelected
-        , onSelected (\_ -> DataTree <| SelectCel i)
+        , selected <| selection.cel == i
+        , onSelected (\_ -> SelectData <| selectCel i selection)
         ]
         [ span [] [ icon "image" ]
         , span
             []
             [ text cel.name ]
         ]
+
+
+newCel : Data -> Data
+newCel data =
+    let
+        cel =
+            { zeroCel
+                | name = "cel" ++ String.fromInt (Array.length data.cels)
+            }
+    in
+    { data | cels = Array.push cel data.cels }
+
+
+selectCel : Int -> DataSelection -> DataSelection
+selectCel i selection =
+    { selection | cel = i }

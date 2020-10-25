@@ -6,39 +6,47 @@ import CelAnimate.Data exposing (..)
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
-import Math.Vector3 exposing (Vec3, vec3)
+import File exposing (File)
+import Html.Events.Extra.Pointer as Pointer
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 
 
 type Msg
     = ViewportResized Int Int
-    | CanvasPointer CanvasPointerMsg
-    | DataTree DataTreeMsg
-    | Parameters ParameterMsg
-    | ToolInput ToolMsg Tool
+    | Pointer PointerEvent Pointer.Event
+    | ToolInput ToolMsg
     | ToolChange ToolState
+    | FileAction FileMsg
+    | ChangeParameter ParameterDesc Float
+    | SelectData DataSelection
+    | ModifyData (Data -> Data)
+    | Batch Msg Msg
 
 
-type CanvasPointerMsg
+type PointerEvent
     = PointerDown
-    | PointerMove ( Float, Float )
+    | PointerMove
     | PointerUp
+    | PointerCancel
 
 
-type DataTreeMsg
-    = SelectCel Int
-    | NewCel Int
+type alias ToolMsg =
+    { event : ToolEvent
+    , tool : Tool
+    }
 
 
-type ParameterMsg
-    = ParameterUse { desc : ParameterDesc, use : Bool }
-    | SetValue { name : String, value : Float }
-
-
-type ToolMsg
+type ToolEvent
     = ToolStart
     | ToolMove
     | ToolFinish
     | ToolHover
+
+
+type FileMsg
+    = FileSelect
+    | FileSelected File
+    | FileLoaded File String
 
 
 type alias Model =
@@ -80,6 +88,7 @@ type EditorMode
 
 type alias CameraState =
     { position : Vec3
+    , lookAt : Vec3
     , fov : Float
     , aspect : Float
     }
@@ -88,6 +97,7 @@ type alias CameraState =
 initCameraState : CameraState
 initCameraState =
     { position = vec3 0 0 4
+    , lookAt = vec3 0 0 0
     , fov = 50
     , aspect = 1
     }
@@ -138,29 +148,103 @@ viewSize camera distance =
     { width = width, height = height }
 
 
-currentCel : Model -> Maybe Cel
-currentCel model =
-    model.data.cels
-        |> Array.get model.dataSelection.cel
+selectedCel : DataSelection -> Data -> Maybe Cel
+selectedCel selection data =
+    Array.get selection.cel data.cels
 
 
-updateCurrentCel : (Cel -> Cel) -> Model -> Model
-updateCurrentCel f model =
+selectedKeyframe : DataSelection -> Data -> Maybe Keyframe
+selectedKeyframe selection data =
+    selectedCel selection data
+        |> Maybe.andThen (.keyframes >> Array.get selection.keyframe)
+
+
+updateCel : DataSelection -> (Cel -> Cel) -> Data -> Data
+updateCel selection f data =
+    { data | cels = Array.update selection.cel f data.cels }
+
+
+updateKeyframe : DataSelection -> (Keyframe -> Keyframe) -> Data -> Data
+updateKeyframe selection f data =
     let
-        data =
-            model.data
-    in
-    { model
-        | data =
-            { data
-                | cels =
-                    Array.update model.dataSelection.cel f data.cels
+        update cel =
+            { cel
+                | keyframes =
+                    Array.update selection.keyframe f cel.keyframes
             }
-    }
+    in
+    updateCel selection update data
 
 
-currentKeyframe : Model -> Maybe Keyframe
-currentKeyframe model =
-    currentCel model
-        |> Maybe.andThen
-            (\cel -> Array.get model.dataSelection.keyframe cel.keyframes)
+
+-- updateCurrentCel : (Cel -> Cel) -> Model -> Model
+-- updateCurrentCel f model =
+--     let
+--         data =
+--             model.data
+--     in
+--     { model
+--         | data =
+--             { data
+--                 | cels =
+--                     Array.update model.dataSelection.cel f data.cels
+--             }
+--     }
+-- currentKeyframe : Model -> Maybe Keyframe
+-- currentKeyframe model =
+--     currentCel model
+--         |> Maybe.andThen
+--             (\cel -> Array.get model.dataSelection.keyframe cel.keyframes)
+-- updateCurrentKeyframe : (Keyframe -> Keyframe) -> Model -> Model
+-- updateCurrentKeyframe f model =
+--     let
+--         update cel =
+--             { cel
+--                 | keyframes =
+--                     Array.update model.dataSelection.keyframe f cel.keyframes
+--             }
+--     in
+--     updateCurrentCel update model
+
+
+cursorPosition : Model -> ( Float, Float ) -> Vec3
+cursorPosition model ( cx, cy ) =
+    let
+        size =
+            viewSize model.camera (Vec3.length model.camera.position)
+
+        ( w, h ) =
+            ( toFloat model.viewportSize.width
+            , toFloat model.viewportSize.height
+            )
+
+        -- ( cx, cy ) =
+        --     cursor.position
+        x =
+            (cx - w / 2) / w * size.width
+
+        y =
+            (h / 2 - cy) / h * size.height
+    in
+    Vec3.vec3 x y 0
+
+
+cursorVelocity : Model -> ( Float, Float ) -> Vec3
+cursorVelocity model ( vx, vy ) =
+    let
+        size =
+            viewSize model.camera (Vec3.length model.camera.position)
+
+        ( w, h ) =
+            ( toFloat model.viewportSize.width
+            , toFloat model.viewportSize.height
+            )
+
+        -- ( cx, cy ) =
+        --     cursor.position
+        -- x =
+        --     vx / w * size.width
+        -- y =
+        --     (0 - vy) / h * size.height
+    in
+    Vec3.vec3 vx (0 - vy) 0

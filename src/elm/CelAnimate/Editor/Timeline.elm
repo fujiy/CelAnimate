@@ -19,9 +19,17 @@ import Round
 import Set
 
 
-timeline : ParameterVector -> Maybe Cel -> Html Msg
-timeline pv mcel =
+type ParameterMsg
+    = Use ParameterDesc Bool
+    | SetValue ParameterDesc Float
+
+
+view : ParameterVector -> DataSelection -> Data -> Html Msg
+view pv selection data =
     let
+        mcel =
+            selectedCel selection data
+
         usingParams =
             Maybe.map .parameters mcel
                 |> Maybe.withDefault Dict.empty
@@ -32,19 +40,27 @@ timeline pv mcel =
         params =
             parameters
                 |> Array.mapToList (\p -> ( p, Set.member p.name usingParams ))
+
+        message msg =
+            case msg of
+                Use desc use ->
+                    ModifyData <| useParameter desc use selection
+
+                SetValue desc value ->
+                    ChangeParameter desc value
     in
-    div [ class "h-64 bg-gray-800" ] <|
-        List.map
-            (\( desc, using ) ->
-                let
-                    value =
-                        Dict.get desc.name pv
-                            |> Maybe.withDefault (defaultValue desc)
-                in
-                Html.map Parameters <|
+    Html.map message <|
+        div [ class "h-64 bg-gray-800" ] <|
+            List.map
+                (\( desc, using ) ->
+                    let
+                        value =
+                            Dict.get desc.name pv
+                                |> Maybe.withDefault (defaultValue desc)
+                    in
                     parameter (Parameter desc value) using
-            )
-            params
+                )
+                params
 
 
 parameter : Parameter -> Bool -> Html ParameterMsg
@@ -58,15 +74,13 @@ parameter p using =
                 , boolAttr "checked" using
                 , property "checked" <| Encode.bool using
                 , onCheck
-                    (\checked ->
-                        ParameterUse { desc = p.desc, use = checked }
-                    )
+                    (\checked -> Use p.desc checked)
                 ]
                 []
             , span [] [ text p.desc.name ]
             ]
         , Html.map
-            (\value -> SetValue { name = p.desc.name, value = value })
+            (SetValue p.desc)
             (slider using (minimumValue p.desc) (maximumValue p.desc) p.value)
         ]
 
@@ -110,6 +124,22 @@ slider using min max value =
         , span [ class "w-24" ]
             [ text <| Round.round 2 value ]
         ]
+
+
+useParameter : ParameterDesc -> Bool -> DataSelection -> Data -> Data
+useParameter desc use selection data =
+    let
+        update cel =
+            { cel
+                | parameters =
+                    if use then
+                        Dict.insert desc.name desc cel.parameters
+
+                    else
+                        Dict.remove desc.name cel.parameters
+            }
+    in
+    updateCel selection update data
 
 
 dragX : (Float -> Float) -> Decoder Float

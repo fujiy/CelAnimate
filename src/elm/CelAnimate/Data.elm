@@ -3,6 +3,7 @@ module CelAnimate.Data exposing (..)
 import Array exposing (Array)
 import CelAnimate.Algebra exposing (..)
 import Dict exposing (Dict)
+import File exposing (File)
 import Math.Vector3 as Vec3 exposing (Vec3)
 
 
@@ -21,7 +22,7 @@ type alias Cel =
 
 type alias Keyframe =
     { name : String
-    , image : String
+    , image : Maybe ( File, String )
     , mesh : Mesh
     , vector : ParameterVector
     }
@@ -125,7 +126,7 @@ zeroCel =
 zeroKeyframe : Keyframe
 zeroKeyframe =
     { name = "keyframe0"
-    , image = ""
+    , image = Nothing
     , mesh = emptyMesh
     , vector = Dict.empty
     }

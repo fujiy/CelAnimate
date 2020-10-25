@@ -1,10 +1,12 @@
 module CelAnimate.Html exposing (..)
 
+import CelAnimate.Algebra exposing (..)
 import DOM exposing (..)
 import Html exposing (Attribute, Html, i, text)
-import Html.Attributes exposing (attribute, class)
+import Html.Attributes exposing (attribute, class, property)
 import Html.Events exposing (on)
 import Json.Decode as Decode
+import Math.Vector3 as Vec3 exposing (Vec3)
 
 
 type alias Three msg =
@@ -50,3 +52,23 @@ boolAttr name b =
          else
             ""
         )
+
+
+position : Vec3 -> Attribute msg
+position v =
+    property "position" <| encodeVec3 v
+
+
+rotation : Vec3 -> Attribute msg
+rotation v =
+    property "rotation" <| encodeVec3 v
+
+
+lookAt : Vec3 -> Attribute msg
+lookAt v =
+    property "lookAt" <| encodeVec3 v
+
+
+maybe : Maybe (Html msg) -> Html msg
+maybe =
+    Maybe.withDefault (text "")

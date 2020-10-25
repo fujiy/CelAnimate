@@ -59,6 +59,9 @@ export class ThreeElement extends HTMLElement {
 export class ThreeObject extends ThreeElement {
     object3d: THREE.Object3D
     parent: ThreeObject
+    position_: number[] = [0, 0, 0]
+    rotation_: number[] = [0, 0, 0]
+    lookAt_: number[]
 
     constructor() {
         super();
@@ -85,16 +88,31 @@ export class ThreeObject extends ThreeElement {
             console.log("Parent element is not a three object",
                 this.parentElement, this)
         }
+        this.position = this.position_
+        this.rotation = this.rotation_
+        this.lookAt = this.lookAt_
     }
     add(object: ThreeObject) {
         this.object3d.add(object.object3d)
     }
 
-    set position(v) {
+    set position(v: number[]) {
+        this.position_ = v || this.position_
         if (this.object3d) {
-            this.object3d.position.x = v[0]
-            this.object3d.position.y = v[1]
-            this.object3d.position.z = v[2]
+            this.object3d.position.fromArray(this.position_)
+        }
+    }
+    set rotation(v: number[]) {
+        this.rotation_ = v || this.rotation_
+        if (this.object3d) {
+            this.object3d.rotation.fromArray(this.rotation_)
+        }
+    }
+
+    set lookAt(v: number[]) {
+        this.lookAt_ = v
+        if (this.object3d && v) {
+            this.object3d.lookAt(v[0], v[1], v[2])
         }
     }
 }

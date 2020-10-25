@@ -27,7 +27,6 @@ export class PerspectiveCamera extends ThreeCamera {
         this.object3d = new THREE.PerspectiveCamera(
             75, 1,
             0.1, 1000);
-        this.object3d.position.z = 2;
     }
     static get observedAttributes(): string[] {
         return super.observedAttributes.concat(['aspect', 'fov', 'auto-aspect'])
