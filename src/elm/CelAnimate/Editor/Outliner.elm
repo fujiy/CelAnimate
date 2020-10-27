@@ -5,77 +5,122 @@ import Array.Extra as Array
 import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
-import Html exposing (Html, div, input, label, node, p, span, text)
+import Html exposing (Attribute, Html, div, input, label, node, p, span, text)
 import Html.Attributes exposing (class, selected, type_)
-import Html.Events exposing (onClick)
-import Html.Lazy exposing (lazy, lazy2)
+import Html.Events exposing (onClick, onMouseUp)
+import Html.Keyed as Keyed
+import Html.Lazy exposing (lazy, lazy2, lazy3)
+import Maybe.Extra as Maybe
 
 
-
--- view : Data -> DataSelection -> Html Msg
--- view = lazy2 view_
-
-
-view : Data -> DataSelection -> Html Msg
-view data selection =
+view : Selection -> Data -> Html Msg
+view selection data =
     node "tree-group"
-        [ class <|
-            "data-tree flex items-center select-none p-1 text-base "
-                ++ "flex-grow-0 flex-shrink-0 bg-gray-800 z-10 "
-                ++ "overflow-visible"
+        [ class """flex flex-row items-center select-none 
+                   max-h-full bg-gray-800 z-10 
+                   overflow-y-scroll overflow-x-visible"""
         ]
     <|
-        div [ class "group pointer-events-auto overflow-visible" ]
-            [ icon "chevron-down"
-            , span [ class "shadow-lg px-1" ] [ text data.path ]
+        div
+            [ class "group pointer-events-auto overflow-visible"
+            ]
+            [ icon_ "chevron-down"
+            , span [ class "shadow-lg" ] [ text data.name ]
             , node "context-menu"
                 [ class
                     "bg-gray-700 shadow-xl w-32 "
                 ]
-                [ p
-                    [ class "hover:bg-gray-800 p-1"
-                    , onClick <| ModifyData newCel
-                    ]
-                    [ text "New Cel" ]
+                [ contextMenuItem "New Cel" <| ModifyData newCel
                 ]
             ]
             :: Array.indexedMapToList
-                (\i cel -> celView selection i cel)
+                (\i cel -> celView selection (Path i -1) cel)
                 data.cels
 
 
-celView : DataSelection -> Int -> Cel -> Html Msg
-celView selection i cel =
-    node "tree-item"
+celView : Selection -> Path -> Cel -> Html Msg
+celView selection this cel =
+    node "tree-group"
         [ class <|
-            "ml-4 pointer-events-auto "
-                ++ (if selection.cel == i then
-                        "bg-teal-700"
-
-                    else
-                        ""
-                   )
-        , selected <| selection.cel == i
-        , onSelected (\_ -> SelectData <| selectCel i selection)
+            """flex items-center select-none m-px 
+               flex-grow-0 flex-shrink-0 z-10 
+               "overflow-visible"""
+        , boolAttr "selected" <| matchCel selection this
+        , onSelected <| \_ -> SelectData this
         ]
-        [ span [] [ icon "image" ]
-        , span
-            []
-            [ text cel.name ]
+    <|
+        div
+            [ class "group pointer-events-auto overflow-visible"
+            , selectionColor <| matchCel selection this
+            ]
+            [ icon_ "chevron-down"
+            , span
+                [ class <| "pointer-events-auto" ]
+                [ text cel.name ]
+            , node "context-menu"
+                [ class
+                    "bg-gray-700 shadow-xl w-32 "
+                ]
+                [ contextMenuItem "New Keyframe" <|
+                    ModifyData <|
+                        \_ -> newKeyframe this
+                , contextMenuItem "New Cel" <|
+                    ModifyData <|
+                        \_ -> newCel this
+                , contextMenuItem "Delete Cel" <|
+                    ModifyData <|
+                        \_ -> deleteCel this
+                ]
+            ]
+            :: Array.indexedMapToList
+                (\k keyframe ->
+                    keyframeView selection
+                        { this | keyframe = k }
+                        keyframe
+                )
+                cel.keyframes
+
+
+keyframeView : Selection -> Selection -> Keyframe -> Html Msg
+keyframeView selection this keyframe =
+    node "tree-item"
+        [ class "pl-4 my-px pointer-events-auto "
+        , selectionColor <| matchKeyframe selection this
+        , selected <| matchKeyframe selection this
+        , onSelected (\_ -> SelectData this)
+        ]
+        [ span
+            [ class "px-1" ]
+            [ text keyframe.name ]
+        , node "context-menu"
+            [ class
+                "bg-gray-700 shadow-xl w-32 "
+            ]
+            [ contextMenuItem "New Keyframe" <|
+                ModifyData <|
+                    \_ -> newKeyframe this
+            , contextMenuItem "Delete Keyframe" <|
+                ModifyData <|
+                    \_ -> deleteKeyframe this
+            ]
         ]
 
 
-newCel : Data -> Data
-newCel data =
-    let
-        cel =
-            { zeroCel
-                | name = "cel" ++ String.fromInt (Array.length data.cels)
-            }
-    in
-    { data | cels = Array.push cel data.cels }
+contextMenuItem : String -> Msg -> Html Msg
+contextMenuItem title msg =
+    p
+        [ class "hover:bg-gray-800 p-1"
+        , onClick msg
+        ]
+        [ text title ]
 
 
-selectCel : Int -> DataSelection -> DataSelection
-selectCel i selection =
-    { selection | cel = i }
+selectionColor : Bool -> Attribute msg
+selectionColor selected =
+    class
+        (if selected then
+            "bg-teal-700"
+
+         else
+            "bg-gray-700"
+        )

@@ -12,16 +12,17 @@ import CelAnimate.Editor.Property as PropertyEditor
 import CelAnimate.Editor.Timeline as Timeline
 import CelAnimate.Editor.Viewport as Viewport
 import CelAnimate.Html exposing (..)
-import CelAnimate.Tool as Tool
+import CelAnimate.Mode.MeshEdit as MeshEdit
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
 import Dict
 import File
 import File.Select as Select
-import Html exposing (Html, button, div)
+import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
+import Html.Events.Extra.Pointer as Pointer
 import Math.Vector3 as Vec3 exposing (Vec3)
 import Platform.Cmd
 import Task
@@ -31,11 +32,11 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( { viewportSize = { width = 800, height = 600 }
       , camera = initCameraState
-      , toolState = initToolState
+      , mode = MorphMode
       , toolSettings = initToolSettings
       , cursor = initCursor
       , data = zeroData
-      , dataSelection = DataSelection 0 0
+      , selection = Path -1 -1
       , parameters = Dict.empty
       }
     , Cmd.none
@@ -53,10 +54,14 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
         SelectData selection ->
-            ( { model | dataSelection = selection }, Cmd.none )
+            ( { model | selection = selection }
+            , Cmd.none
+            )
 
         ModifyData modify ->
-            ( { model | data = modify model.data }, Cmd.none )
+            ( { model | data = modify model.selection model.data }
+            , Cmd.none
+            )
 
         ChangeParameter desc value ->
             ( { model
@@ -66,29 +71,35 @@ update message model =
             , Cmd.none
             )
 
-        ToolChange state ->
-            ( { model | toolState = state }, Cmd.none )
+        SwitchMode mode ->
+            ( { model | mode = mode }, Cmd.none )
 
         ToolInput msg ->
             let
-                result =
-                    Tool.input model.toolSettings
-                        model.toolState
-                        msg
-                        model.dataSelection
-                        model.data
+                mode =
+                    case model.mode of
+                        MeshEditMode state _ mesh -> 
+                            let
+                                result =
+                                    MeshEdit.input model.toolSettings
+                                        state
+                                        msg
+                                        mesh
+                            in
+                            MeshEditMode result.progress result.using <|
+                                Maybe.withDefault mesh result.commit
+
+                        MorphMode ->
+                            MorphMode
             in
-            ( { model
-                | toolState = result.progress
-                , data = Maybe.withDefault model.data result.commit
-              }
+            ( { model | mode = mode }
             , Cmd.none
             )
 
         Pointer pe event ->
             let
                 ( cursor, tmsg ) =
-                    Tool.pointer pe event model
+                    pointer pe event model
             in
             ( { model | cursor = cursor }
             , Task.perform (\_ -> ToolInput tmsg) (Task.succeed ())
@@ -127,7 +138,7 @@ update message model =
                 FileLoaded file url ->
                     ( { model
                         | data =
-                            updateKeyframe model.dataSelection
+                            updateKeyframe model.selection
                                 (\keyframe -> { keyframe | image = Just ( file, url ) })
                                 model.data
                       }
@@ -145,59 +156,87 @@ update message model =
 
 view : Model -> Html Msg
 view model =
-    div [ class "flex flex-row w-screen text-white select-none" ]
-        [ toolBar model
-        , div [ class "flex flex-col flex-grow flex-shrink" ]
-            [ div [ class "flex flex-row flex-grow flex-shrink" ]
-                [ Outliner.view model.data model.dataSelection
-                , Viewport.view model
-                , PropertyEditor.view model.dataSelection model.data
+    div [ class """flex flex-row w-screen h-screen text-white select-none 
+                   relative text-sm""" ]
+        [ toolBar model.mode
+        , div [ class "flex flex-col flex-1 h-screen" ]
+            [ div [ class "flex flex-row h-3-4" ]
+                [ Outliner.view model.selection model.data
+                , div [ class "flex flex-col flex-auto" ]
+                    [ topToolBar model.mode
+                    , Viewport.view model
+                    ]
+                , PropertyEditor.view model.selection model.data
                 ]
-            , Timeline.view model.parameters model.dataSelection model.data
+            , Timeline.view model.parameters model.selection model.data
             ]
         ]
 
 
-toolBar : Model -> Html Msg
-toolBar model =
-    let
-        tool =
-            case model.toolState of
-                PolygonMove _ ->
-                    0
-
-                PolygonDraw _ ->
-                    1
-
-                PolygonErase _ ->
-                    2
-    in
+toolBar : ModeState -> Html Msg
+toolBar _ =
     div
-        [ class <|
-            "h-screen w-8 bg-gray-700 flex flex-col text-xl select-none "
-                ++ "pointer-events-auto flex-grow-0 flex-shrink-0"
+        [ class """h-screen w-8 bg-gray-700 flex flex-col
+                   pointer-events-auto flex-none mr-px"""
         ]
-        [ toolIcon "arrows-alt" (tool == 0) <|
-            PolygonMove PolygonMove.initState
-        , toolIcon "paint-brush" (tool == 1) <|
-            PolygonDraw PolygonDraw.initState
-        , toolIcon "eraser" (tool == 2) <|
-            PolygonErase PolygonErase.initState
-        ]
+        []
 
 
-toolIcon : String -> Bool -> ToolState -> Html Msg
+topToolBar : ModeState -> Html Msg
+topToolBar mode =
+    case mode of
+        MorphMode ->
+            div [ class "flex-none" ] []
+
+        MeshEditMode state _ mesh ->
+            div [ class "flex flex-row w-full bg-gray-800 px-px pb-px" ]
+                [ Html.map (\s -> SwitchMode <| MeshEditMode s False mesh) <|
+                    div [ class "flex flex-row flex-auto px-4 bg-gray-700" ]
+                        [ toolIcon "arrows-alt" (toolNum state == 0) <|
+                            PolygonMove PolygonMove.initState
+                        , toolIcon "paint-brush" (toolNum state == 1) <|
+                            PolygonDraw PolygonDraw.initState
+                        , toolIcon "eraser" (toolNum state == 2) <|
+                            PolygonErase PolygonErase.initState
+                        ]
+                , div [ class """flex flex-row-reverse text-center px-4 
+                             bg-gray-700""" ]
+                    [ button
+                        [ class "bg-gray-800 hover:bg-gray-900 px-2 m-1"
+                        , onClick <|
+                            Batch (ModifyData <| MeshEdit.finish mesh)
+                                (SwitchMode MorphMode)
+                        ]
+                        [ icon_ "check", text "Finish Mesh Editing" ]
+                    ]
+                ]
+
+
+toolNum : MeshEditToolState -> Int
+toolNum state =
+    case state of
+        PolygonMove _ ->
+            0
+
+        PolygonDraw _ ->
+            1
+
+        PolygonErase _ ->
+            2
+
+
+toolIcon : String -> Bool -> MeshEditToolState -> Html MeshEditToolState
 toolIcon name now state =
     button
         [ class <|
-            "p-1 select-none focus:outline-none "
+            "w-8 h-8 select-none focus:outline-none text-xl select-none "
                 ++ (if now then
                         "bg-teal-700"
 
                     else
-                        ""
+                        "bg-gray-700"
                    )
-        , onClick <| ToolChange state
+        , onClick state
         ]
         [ icon name ]
 
@@ -223,3 +262,69 @@ cursorView model =
 subs : Model -> Sub Msg
 subs model =
     Sub.none
+
+
+pointer : PointerEvent -> Pointer.Event -> Model -> ( Cursor, ToolMsg )
+pointer pe event model =
+    let
+        position =
+            event.pointer.offsetPos
+
+        cursor =
+            model.cursor
+
+        velocity =
+            ( (Tuple.first position - Tuple.first cursor.position)
+                * 0.5
+                + Tuple.first cursor.velocity
+                * 0.5
+            , (Tuple.second position - Tuple.second cursor.position)
+                * 0.5
+                + Tuple.second cursor.velocity
+                * 0.5
+            )
+
+        newCursor =
+            { position = position
+            , velocity = velocity
+            , down =
+                case pe of
+                    PointerDown ->
+                        True
+
+                    PointerUp ->
+                        False
+
+                    PointerCancel ->
+                        False
+
+                    _ ->
+                        cursor.down
+            }
+
+        tool =
+            { center = cursorPosition model newCursor.position
+            , direction = cursorVelocity model newCursor.velocity
+            , u = Vec3.vec3 1 0 0
+            , v = Vec3.vec3 0 1 0
+            }
+
+        toolEvent =
+            case pe of
+                PointerDown ->
+                    ToolStart
+
+                PointerUp ->
+                    ToolFinish
+
+                PointerCancel ->
+                    ToolFinish
+
+                PointerMove ->
+                    if newCursor.down then
+                        ToolMove
+
+                    else
+                        ToolHover
+    in
+    ( newCursor, ToolMsg toolEvent tool )

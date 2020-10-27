@@ -29,12 +29,12 @@ initState =
     }
 
 
-start : Settings -> Tool -> Keyframe -> State
-start settings tool keyframe =
+start : Settings -> Tool -> Mesh -> State
+start settings tool mesh =
     { kdTree =
         KdTree.build verticeToArray <|
-            Array.indexedMap Tuple.pair keyframe.mesh.vertices
-    , polygons = keyframe.mesh.faces
+            Array.indexedMap Tuple.pair mesh.vertices
+    , polygons = mesh.faces
     , drawing = True
     }
 
@@ -49,9 +49,9 @@ progress state =
     }
 
 
-finish : State -> Keyframe -> Keyframe
-finish state keyframe =
-    { keyframe | mesh = progress state }
+finish : State -> Mesh
+finish =
+    progress
 
 
 step : Settings -> Tool -> State -> State

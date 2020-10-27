@@ -24,7 +24,7 @@ type ParameterMsg
     | SetValue ParameterDesc Float
 
 
-view : ParameterVector -> DataSelection -> Data -> Html Msg
+view : ParameterVector -> Selection -> Data -> Html Msg
 view pv selection data =
     let
         mcel =
@@ -44,13 +44,13 @@ view pv selection data =
         message msg =
             case msg of
                 Use desc use ->
-                    ModifyData <| useParameter desc use selection
+                    ModifyData <| useParameter desc use
 
                 SetValue desc value ->
                     ChangeParameter desc value
     in
     Html.map message <|
-        div [ class "h-64 bg-gray-800" ] <|
+        div [ class "h-1-4 bg-gray-800 " ] <|
             List.map
                 (\( desc, using ) ->
                     let
@@ -126,7 +126,7 @@ slider using min max value =
         ]
 
 
-useParameter : ParameterDesc -> Bool -> DataSelection -> Data -> Data
+useParameter : ParameterDesc -> Bool -> Selection -> Data -> Data
 useParameter desc use selection data =
     let
         update cel =

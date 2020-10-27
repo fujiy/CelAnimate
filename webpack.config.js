@@ -1,8 +1,96 @@
 var path = require("path");
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const HardSourceWebpackPlugin = require('hard-source-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 const outputPath = path.resolve(__dirname + '/dist');
+
+const config = {
+    entry: './src/renderer.ts',
+    output: {
+        path: outputPath,
+        filename: 'main.js'
+    },
+
+    module: {
+        rules: [
+            {
+                test: /\.s[ac]ss$/i,
+                use: [
+                    'style-loader',
+                    'css-loader',
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                            postcssOptions: {
+                                ident: 'postcss',
+                                plugins: [
+                                    require('tailwindcss'),
+                                    require('autoprefixer'),
+                                ],
+                            },
+                        }
+                    },
+                    'sass-loader',
+                ],
+            },
+            {
+                test:    /\.html$/,
+                exclude: /node_modules/,
+                use:  'file-loader?name=[name].[ext]',
+            },
+            {
+                test: /\.ts$/,
+                use: 'ts-loader',
+            },
+            {
+                test:    /\.elm$/,
+                exclude: [/elm-stuff/, /node_modules/],
+                use:  'elm-webpack-loader?verbose=true',
+                // options: {
+                    // debug: true,
+                // }
+            },
+            {
+                test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+                use: 'url-loader?limit=10000&mimetype=application/font-woff',
+            },
+            {
+                test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+                use: 'file-loader',
+            },
+            {
+                test: /\.html$/,
+                use: "html-loader"
+            }
+
+        ],
+        noParse: /\.elm$/,
+    },
+
+    resolve: {
+        extensions: [
+            '.ts', '.js',
+        ],
+    },
+
+    watch: true,
+
+    devServer: {
+        inline: true,
+        contentBase: './dist',
+        stats: { colors: true },
+    },
+    devtool: "source-map",
+    plugins: [
+        new HtmlWebpackPlugin({
+            title: "Cel Animate"
+        }),
+        new HardSourceWebpackPlugin()
+    ],
+
+
+}
 
 const mainConfig = {
     target: 'electron-main',
@@ -11,6 +99,7 @@ const mainConfig = {
         path: outputPath,
         filename: 'main.js'
     },
+    watch: true,
     module: {
         rules: [
             {
@@ -19,7 +108,7 @@ const mainConfig = {
             },
             {
                 test: /\.html$/,
-                loader: "html-loader"
+                use: "html-loader"
             }
         ],
     },
@@ -70,7 +159,7 @@ const rendererConfig = {
             {
                 test:    /\.html$/,
                 exclude: /node_modules/,
-                loader:  'file-loader?name=[name].[ext]',
+                use:  'file-loader?name=[name].[ext]',
             },
             {
                 test: /\.ts$/,
@@ -79,22 +168,22 @@ const rendererConfig = {
             {
                 test:    /\.elm$/,
                 exclude: [/elm-stuff/, /node_modules/],
-                loader:  'elm-webpack-loader?verbose=true',
-                options: {
+                use:  'elm-webpack-loader?verbose=true',
+                // options: {
                     // debug: true,
-                }
+                // }
             },
             {
                 test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-                loader: 'url-loader?limit=10000&mimetype=application/font-woff',
+                use: 'url-loader?limit=10000&mimetype=application/font-woff',
             },
             {
                 test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-                loader: 'file-loader',
+                use: 'file-loader',
             },
             {
                 test: /\.html$/,
-                loader: "html-loader"
+                use: "html-loader"
             }
 
         ],
@@ -127,6 +216,18 @@ const rendererConfig = {
         new HardSourceWebpackPlugin()
     ],
 
+    optimization: {
+        // minimize: true,
+        // minimizer: [new TerserPlugin({
+        //     terserOptions: {
+        //         ecma: 6,
+        //         compress: true,
+        //     }
+        // })
+        // ],
+    },
+
 };
 
 module.exports = [mainConfig, rendererConfig];
+// module.exports = config

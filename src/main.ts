@@ -30,10 +30,15 @@ app.on('window-all-closed', function() {
 
 app.on('ready', function() {
 
+
     mainWindow = new BrowserWindow({
         width: 800, height: 600,
         webPreferences: {
-            nodeIntegration: true
+            nodeIntegration: true,
+            // webSecurity: false,
+            // allowRunningInsecureContent: true,
+            // experimentalFeatures: true,
+            // nativeWindowOpen: true
         }
         // webPreferences: {
         // webSecurity: false

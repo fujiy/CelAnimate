@@ -78,13 +78,19 @@ export class BoxGeometry extends ThreeGeometry {
             this.numAttr("heightSegments"),
             this.numAttr("depthSegments"))
     }
+}
 
+export class PlaneGeometry extends ThreeGeometry {
+    willConnect() {
+        this.geometry = new THREE.PlaneBufferGeometry(
+            this.numAttr("width"),
+            this.numAttr("height"),
+            this.numAttr("widthSegments"),
+            this.numAttr("heightSegments"))
+    }
 }
 
 export class CircleGeometry extends ThreeGeometry {
-    constructor() {
-        super()
-    }
     willConnect() {
         this.geometry = new THREE.CircleBufferGeometry(
             this.numAttr("radius"),
@@ -106,5 +112,6 @@ export class EdgesGeometry extends ThreeGeometry {
 
 customElements.define('geometry-buffer', BufferGeometry)
 customElements.define('geometry-box', BoxGeometry)
+customElements.define('geometry-plane', PlaneGeometry)
 customElements.define('geometry-circle', CircleGeometry)
 customElements.define('geometry-edges', EdgesGeometry)

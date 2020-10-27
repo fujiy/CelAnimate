@@ -1,13 +1,13 @@
 
 export class TreeGroup extends HTMLElement {
 
-    selected: boolean
+    selected: boolean = false
 
     constructor() {
         super()
     }
     static get observedAttributes(): string[] {
-        return [];
+        return ['selected'];
     }
     attributeChangedCallback(name: string, _oldValue: any, value: any) {
         switch (name) {
@@ -17,11 +17,22 @@ export class TreeGroup extends HTMLElement {
     }
     connectedCallback() {
         this.style.display = "block"
+
+        Array.from(this.getElementsByClassName('group')).forEach(x => {
+            if (x.parentElement != this) return
+            x.addEventListener('click', _ => {
+                if (!this.selected) {
+                    this.selected = true
+                    const event = new Event("change")
+                    this.dispatchEvent(event)
+                }
+            })
+        })
     }
 }
 
 export class TreeItem extends HTMLElement {
-    selected: boolean
+    selected: boolean = false
 
     constructor() {
         super()

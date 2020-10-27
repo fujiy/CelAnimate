@@ -8,13 +8,14 @@ export class ContextMenu extends HTMLElement {
         this.parentElement.addEventListener("contextmenu", e => {
             this.style.display = "block"
             const rect = this.parentElement.getBoundingClientRect()
-            this.style.left = e.pageX - rect.left + "px"
-            this.style.top = e.pageY - rect.top + "px"
+            this.style.left = e.pageX + "px"
+            this.style.top = e.pageY + "px"
             e.preventDefault()
             e.stopPropagation()
         })
-        document.addEventListener("click", _ => {
+        document.addEventListener("click", e => {
             this.style.display = "none"
+            e.stopPropagation()
         })
     }
 }

@@ -1,14 +1,27 @@
 module CelAnimate.Data exposing (..)
 
-import Array exposing (Array)
+import Array as Array exposing (Array)
+import Array.Extra as Array
 import CelAnimate.Algebra exposing (..)
 import Dict exposing (Dict)
 import File exposing (File)
 import Math.Vector3 as Vec3 exposing (Vec3)
+import Maybe as Maybe
+import Maybe.Extra as Maybe
+
+
+type alias Path =
+    { cel : Int
+    , keyframe : Int
+    }
+
+
+type alias Selection =
+    Path
 
 
 type alias Data =
-    { path : String
+    { name : String
     , cels : Array Cel
     }
 
@@ -110,7 +123,7 @@ parameters =
 
 zeroData : Data
 zeroData =
-    { path = "untitled"
+    { name = "untitled"
     , cels = Array.empty
     }
 
@@ -138,3 +151,86 @@ type alias Tool =
     , u : Vec3
     , v : Vec3
     }
+
+
+matchCel : Path -> Path -> Bool
+matchCel a b =
+    a.cel == b.cel
+
+
+matchKeyframe : Path -> Path -> Bool
+matchKeyframe a b =
+    a.cel == b.cel && a.keyframe == b.keyframe
+
+
+selectedCel : Path -> Data -> Maybe Cel
+selectedCel selection data =
+    Array.get selection.cel data.cels
+
+
+selectedKeyframe : Path -> Data -> Maybe Keyframe
+selectedKeyframe selection data =
+    selectedCel selection data
+        |> Maybe.andThen (.keyframes >> Array.get selection.keyframe)
+
+
+updateCel : Path -> (Cel -> Cel) -> Data -> Data
+updateCel selection f data =
+    { data | cels = Array.update selection.cel f data.cels }
+
+
+updateKeyframe : Path -> (Keyframe -> Keyframe) -> Data -> Data
+updateKeyframe selection f data =
+    let
+        update cel =
+            { cel
+                | keyframes =
+                    Array.update selection.keyframe f cel.keyframes
+            }
+    in
+    updateCel selection update data
+
+
+newCel : Path -> Data -> Data
+newCel _ data =
+    let
+        cel =
+            { zeroCel
+                | name = "cel" ++ String.fromInt (Array.length data.cels)
+            }
+    in
+    { data | cels = Array.push cel data.cels }
+
+
+deleteCel : Path -> Data -> Data
+deleteCel at data =
+    { data | cels = Array.removeAt at.cel data.cels }
+
+
+newKeyframe : Path -> Data -> Data
+newKeyframe at data =
+    let
+        k =
+            selectedCel at data
+                |> Maybe.unwrap 0 (.keyframes >> Array.length)
+
+        keyframe =
+            { zeroKeyframe
+                | name =
+                    "keyframe" ++ String.fromInt k
+            }
+    in
+    updateCel at
+        (\c -> { c | keyframes = Array.push keyframe c.keyframes })
+        data
+
+
+deleteKeyframe : Path -> Data -> Data
+deleteKeyframe at =
+    updateCel at
+        (\cel ->
+            { cel
+                | keyframes =
+                    Array.removeAt at.keyframe cel.keyframes
+            }
+        )

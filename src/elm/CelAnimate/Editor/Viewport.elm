@@ -6,13 +6,13 @@ import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
-import CelAnimate.Tool as Tool
+import CelAnimate.Mode.MeshEdit as MeshEdit
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
 import Dict
 import Html exposing (Html, node, text)
-import Html.Attributes exposing (attribute, class, id, property)
+import Html.Attributes exposing (attribute, class, id, property, src)
 import Html.Events.Extra.Pointer as Pointer
 import Json.Encode as Encode
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
@@ -24,7 +24,7 @@ view model =
     node "three-canvas"
         [ attribute "scene-id" "scene"
         , boolAttr "auto-size" True
-        , class "flex-grow flex-shrink"
+        , class "flex flex-auto"
         , Pointer.onMove <| Pointer PointerMove
         , Pointer.onDown <| Pointer PointerDown
         , Pointer.onUp <| Pointer PointerUp
@@ -39,51 +39,40 @@ view model =
             , attribute "camera-id" "camera"
             , attribute "background" "#1A202C"
             ]
-          <|
-            List.append
-                [ camera model.camera
-                , body model.dataSelection model.parameters model.data.cels
-                , case model.toolState of
-                    PolygonDraw state ->
-                        polygonMesh True <|
-                            PolygonDraw.progress state
-
-                    PolygonErase state ->
-                        polygonMesh True <|
-                            PolygonErase.progress state
-
-                    PolygonMove state ->
-                        polygonMesh True <|
-                            PolygonMove.progress state
-                , cursorObject model
-                ]
-                (case selectedKeyframe model.dataSelection model.data of
-                    Just keyframe ->
-                        let
-                            drawing =
-                                case model.toolState of
-                                    PolygonDraw state ->
-                                        state.drawing
-
-                                    PolygonErase state ->
-                                        state.using
-
-                                    PolygonMove state ->
-                                        state.using
-                        in
-                        if drawing then
-                            []
-
-                        else
-                            [ polygonMesh False keyframe.mesh ]
-
-                    Nothing ->
-                        []
-                )
+            [ camera model.camera
+            , body model.selection model.parameters model.data.cels
+            , toolView model.mode model.selection model.data
+            , cursorObject model
+            ]
         ]
 
 
-body : DataSelection -> ParameterVector -> Array Cel -> Three msg
+
+toolView : ModeState -> Selection -> Data -> Three msg
+toolView mode selection data =
+    node "three-group" []
+        [case Maybe.andThen .image <| selectedKeyframe selection data of
+              Nothing -> text ""
+              Just (_, url) ->
+                  node "three-mesh"
+                      []
+                      [ node "geometry-plane"
+                            [floatAttr "width" 2
+                            , floatAttr "height" 2] []
+                      , node "material-mesh-basic"
+                          [boolAttr "transparent" True]
+                          [node "three-texture" [src url] []]
+                      ]
+        , case mode of
+             MorphMode -> text ""
+             MeshEditMode state using mesh ->
+                             if using then
+                                 polygonMesh True <| MeshEdit.progress state
+                             else
+                                 polygonMesh False mesh
+        ]
+
+body : Selection -> ParameterVector -> Array Cel -> Three msg
 body selection pv cels =
     let
         pitch =
@@ -104,15 +93,10 @@ body selection pv cels =
             Array.mapToList (celObject selection) cels
 
 
-celObject : DataSelection -> Cel -> Three msg
+celObject : Selection -> Cel -> Three msg
 celObject selection cel =
-    maybe
-        (Array.get selection.keyframe cel.keyframes
-            |> Maybe.map
-                (\keyframe ->
-                    polygonMesh False keyframe.mesh
-                )
-        )
+    maybe (\keyframe -> polygonMesh False keyframe.mesh)
+        (Array.get selection.keyframe cel.keyframes)
 
 
 camera : CameraState -> Three msg

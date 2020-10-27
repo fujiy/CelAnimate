@@ -2,11 +2,12 @@ module CelAnimate.Html exposing (..)
 
 import CelAnimate.Algebra exposing (..)
 import DOM exposing (..)
-import Html exposing (Attribute, Html, i, text)
+import Html exposing (Attribute, Html, i, span, text)
 import Html.Attributes exposing (attribute, class, property)
 import Html.Events exposing (on)
 import Json.Decode as Decode
 import Math.Vector3 as Vec3 exposing (Vec3)
+import Maybe.Extra as Maybe
 
 
 type alias Three msg =
@@ -15,7 +16,12 @@ type alias Three msg =
 
 icon : String -> Html msg
 icon name =
-    i [ class <| "select-none fas fa-" ++ name ] []
+    span [] [ i [ class <| "select-none fas fa-" ++ name ] [] ]
+
+
+icon_ : String -> Html msg
+icon_ name =
+    span [ class "p-1" ] [ i [ class <| "select-none fas fa-" ++ name ] [] ]
 
 
 onSelected : (Bool -> msg) -> Attribute msg
@@ -69,6 +75,6 @@ lookAt v =
     property "lookAt" <| encodeVec3 v
 
 
-maybe : Maybe (Html msg) -> Html msg
-maybe =
-    Maybe.withDefault (text "")
+maybe : (a -> Html msg) -> Maybe a -> Html msg
+maybe f =
+    Maybe.unwrap (text "") f

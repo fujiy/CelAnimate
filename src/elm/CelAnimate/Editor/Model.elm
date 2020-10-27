@@ -2,6 +2,7 @@ module CelAnimate.Editor.Model exposing (..)
 
 import Array
 import Array.Extra as Array
+import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
@@ -9,17 +10,18 @@ import CelAnimate.Tool.PolygonMove as PolygonMove
 import File exposing (File)
 import Html.Events.Extra.Pointer as Pointer
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import Maybe.Extra as Maybe
 
 
 type Msg
     = ViewportResized Int Int
     | Pointer PointerEvent Pointer.Event
     | ToolInput ToolMsg
-    | ToolChange ToolState
+    | SwitchMode ModeState
     | FileAction FileMsg
     | ChangeParameter ParameterDesc Float
-    | SelectData DataSelection
-    | ModifyData (Data -> Data)
+    | SelectData Selection
+    | ModifyData (Selection -> Data -> Data)
     | Batch Msg Msg
 
 
@@ -55,35 +57,34 @@ type alias Model =
         , height : Int
         }
     , camera : CameraState
+    , mode : ModeState
     , toolSettings : ToolSettings
-    , toolState : ToolState
     , cursor : Cursor
     , data : Data
-    , dataSelection : DataSelection
+    , selection : Selection
     , parameters : ParameterVector
     }
 
 
-type alias DataSelection =
-    { cel : Int
-    , keyframe : Int
-    }
-
-
-type ToolState
+type MeshEditToolState
     = PolygonDraw PolygonDraw.State
     | PolygonErase PolygonErase.State
     | PolygonMove PolygonMove.State
 
 
-initToolState : ToolState
-initToolState =
-    PolygonDraw PolygonDraw.initState
+type ModeState
+    = MeshEditMode MeshEditToolState Bool Mesh
+    | MorphMode
 
 
-type EditorMode
-    = PolygonEdit
-    | MorphingEdit
+initMeshEditTool : MeshEditToolState
+initMeshEditTool =
+    PolygonMove PolygonMove.initState
+
+
+initModeState : ModeState
+initModeState =
+    MorphMode
 
 
 type alias CameraState =
@@ -127,9 +128,9 @@ type alias ToolSettings =
 
 initToolSettings : ToolSettings
 initToolSettings =
-    { polygonDraw = { radius = 0.1 }
-    , polygonErase = { radius = 0.1 }
-    , polygonMove = { radius = 0.1 }
+    { polygonDraw = { radius = 0.2 }
+    , polygonErase = { radius = 0.2 }
+    , polygonMove = { radius = 0.2 }
     }
 
 
@@ -146,65 +147,6 @@ viewSize camera distance =
             height * camera.aspect
     in
     { width = width, height = height }
-
-
-selectedCel : DataSelection -> Data -> Maybe Cel
-selectedCel selection data =
-    Array.get selection.cel data.cels
-
-
-selectedKeyframe : DataSelection -> Data -> Maybe Keyframe
-selectedKeyframe selection data =
-    selectedCel selection data
-        |> Maybe.andThen (.keyframes >> Array.get selection.keyframe)
-
-
-updateCel : DataSelection -> (Cel -> Cel) -> Data -> Data
-updateCel selection f data =
-    { data | cels = Array.update selection.cel f data.cels }
-
-
-updateKeyframe : DataSelection -> (Keyframe -> Keyframe) -> Data -> Data
-updateKeyframe selection f data =
-    let
-        update cel =
-            { cel
-                | keyframes =
-                    Array.update selection.keyframe f cel.keyframes
-            }
-    in
-    updateCel selection update data
-
-
-
--- updateCurrentCel : (Cel -> Cel) -> Model -> Model
--- updateCurrentCel f model =
---     let
---         data =
---             model.data
---     in
---     { model
---         | data =
---             { data
---                 | cels =
---                     Array.update model.dataSelection.cel f data.cels
---             }
---     }
--- currentKeyframe : Model -> Maybe Keyframe
--- currentKeyframe model =
---     currentCel model
---         |> Maybe.andThen
---             (\cel -> Array.get model.dataSelection.keyframe cel.keyframes)
--- updateCurrentKeyframe : (Keyframe -> Keyframe) -> Model -> Model
--- updateCurrentKeyframe f model =
---     let
---         update cel =
---             { cel
---                 | keyframes =
---                     Array.update model.dataSelection.keyframe f cel.keyframes
---             }
---     in
---     updateCurrentCel update model
 
 
 cursorPosition : Model -> ( Float, Float ) -> Vec3

@@ -33,15 +33,15 @@ initState =
     }
 
 
-start : Settings -> Tool -> Keyframe -> State
-start settings tool keyframe =
+start : Settings -> Tool -> Mesh -> State
+start settings tool mesh =
     let
         kdTree =
             KdTree.build verticeToArray <|
-                Array.indexedMap Tuple.pair keyframe.mesh.vertices
+                Array.indexedMap Tuple.pair mesh.vertices
     in
-    { vertices = keyframe.mesh.vertices
-    , polygons = keyframe.mesh.faces
+    { vertices = mesh.vertices
+    , polygons = mesh.faces
     , movings =
         KdTree.inRadius settings.radius ( 0, tool.center ) kdTree
             |> Array.mapToList (\( i, _ ) -> ( i, zero ))
@@ -78,6 +78,6 @@ progress state =
     }
 
 
-finish : State -> Keyframe -> Keyframe
-finish state keyframe =
-    { keyframe | mesh = progress state }
+finish : State -> Mesh
+finish =
+    progress

@@ -17,7 +17,7 @@ export class ThreeMaterial extends ThreeElement {
                 this.material.opacity = value
                 break
             case 'transparent':
-                this.material.transparent = value
+                this.material.transparent = !!value
                 break
         }
     }
@@ -72,14 +72,11 @@ export class MeshBasicMaterial extends ThreeMaterial {
 
 export class ThreeTexture extends ThreeElement {
     texture: THREE.Texture
+    src: string
 
-    constructor() {
-        super();
-    }
     willConnect() {
-        const src = this.attr('src')
         const loader = new THREE.TextureLoader()
-        this.texture = loader.load(src)
+        this.texture = loader.load(this.src || this.attr('src'))
     }
 }
 
