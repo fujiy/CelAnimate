@@ -61,8 +61,9 @@ step settings tool state =
     }
 
 
-progress : State -> Mesh
-progress state =
+progress : Image -> State -> Mesh
+progress image state =
+    uvMap image.size image.ppm
     { vertices =
         state.vertices
             |> Array.indexedMap
@@ -75,9 +76,10 @@ progress state =
                             x
                 )
     , faces = state.polygons
+    , mapping = Array.empty
     }
 
 
-finish : State -> Mesh
+finish : Image -> State -> Mesh
 finish =
     progress

@@ -14,12 +14,14 @@ export class ThreeGeometry extends ThreeElement {
 export class BufferGeometry extends ThreeGeometry {
     _vertices: number[][] = []
     _faces: number[][] = []
+    _uvs: number[][] = []
 
     maxVertices: number = 500
     maxFaces: number = 500
 
     positions: THREE.BufferAttribute
     indices: THREE.BufferAttribute
+    mappings: THREE.BufferAttribute
 
     set vertices(points: number[][]) {
         this._vertices = points
@@ -42,12 +44,22 @@ export class BufferGeometry extends ThreeGeometry {
         }
 
     }
+    set uvs(mappings: number [][]) { 
+        this._uvs = mappings
+        if (this.geometry) {
+            mappings.forEach((mapping, i) => {
+                this.mappings.setXY(i, mapping[0], mapping[1])
+            })
+            this.mappings.needsUpdate = true
+        }
+    }
 
     willConnect() {
         this.init()
 
         this.vertices = this._vertices
         this.faces = this._faces
+        this.uvs = this._uvs
     }
 
     init() {
@@ -60,6 +72,10 @@ export class BufferGeometry extends ThreeGeometry {
         this.indices =
             new THREE.BufferAttribute(new Uint16Array(this.maxFaces * 3), 1)
         this.geometry.setIndex(this.indices)
+
+        this.mappings =
+            new THREE.BufferAttribute(new Float32Array(this.maxVertices * 2), 2)
+        this.geometry.setAttribute('uv', this.mappings)
 
         this.geometry.setDrawRange(0, this._faces.length * 3)
     }

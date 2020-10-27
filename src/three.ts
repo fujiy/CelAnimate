@@ -25,9 +25,20 @@ class ThreeCanvas extends ThreeElement {
     }
     attrChanged() {
     }
-    get scene(): ThreeScene {
-        return document.getElementById(this.getAttribute('scene-id')) as ThreeScene
+
+    get scenes(): ThreeScene[] {
+        const ids = this.getAttribute('scene-id').split(' ')
+        return ids.map(id => document.getElementById(id) as ThreeScene)
     }
+
+    get camera(): ThreeCamera {
+        const id = this.getAttribute('camera-id')
+        if (id) {
+            return document.getElementById(id) as ThreeCamera
+        }
+        else null
+    }
+
     add(_: ThreeObject) {
         // nothing to do
     }
@@ -66,14 +77,17 @@ class ThreeCanvas extends ThreeElement {
         const animate = () => {
             // stats.begin();
 
-            const scene = this.scene
-            const camera = scene.camera
+            this.renderer.setClearColor(0x000000)
+            this.renderer.autoClear = false
 
-            if (camera.autoAspect) {
-                camera.aspect = this.width / this.height
+            for (const scene of this.scenes) {
+                const camera = scene.camera || this.camera
+                if (camera.autoAspect) {
+                    camera.aspect = this.width / this.height
+                }
+                this.renderer.clearDepth()
+                this.renderer.render(scene.object3d, camera.object3d)
             }
-
-            this.renderer.render(scene.object3d, camera.object3d)
 
             // stats.end();
 
@@ -104,8 +118,11 @@ class ThreeScene extends ThreeObject {
     }
 
     get camera(): ThreeCamera {
-        return document.getElementById(
-            this.getAttribute('camera-id')) as ThreeCamera
+        const id = this.getAttribute('camera-id')
+        if (id) {
+            return document.getElementById(id) as ThreeCamera
+        }
+        else null
     }
     // [...this.children].map(e => { this.object.add(e.object); });
 }

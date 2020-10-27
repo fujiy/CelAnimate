@@ -56,13 +56,13 @@ step settings tool state =
     { state | deletions = Set.union state.deletions targets }
 
 
-finish : State -> Mesh
+finish : Image -> State -> Mesh
 finish =
     progress
 
 
-progress : State -> Mesh
-progress state =
+progress : Image -> State -> Mesh
+progress image state =
     let
         remaining ( i, j, k ) =
             not
@@ -100,7 +100,7 @@ progress state =
                 |> Maybe.join
                 |> Maybe.withDefault -1
     in
-    -- Debug.log "mesh"
+    uvMap image.size image.ppm 
     { vertices =
         KdTree.toList state.kdTree
             |> List.sortBy Tuple.first
@@ -116,4 +116,5 @@ progress state =
     , faces =
         remainFaces
             |> Array.map (\( i, j, k ) -> ( convert i, convert j, convert k ))
+    , mapping = Array.empty
     }

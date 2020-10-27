@@ -8,17 +8,18 @@ import CelAnimate.Html exposing (..)
 import CelAnimate.Mode.MeshEdit as MeshEdit
 import File
 import Html exposing (Html, button, div, img, p, span, text)
-import Html.Attributes exposing (class, src)
-import Html.Events exposing (onClick)
+import Html.Attributes as Attr exposing (class, src)
+import Html.Events as Events exposing (onClick)
 import Maybe
 import Maybe.Extra as Maybe
+import Tuple
 
 
 view : Selection -> Data -> Html Msg
 view selection data =
     div [ class "flex flex-col w-48 bg-gray-800 p-px" ]
         [ maybe celProperty <| selectedCel selection data
-        , maybe keyframeProperty <| selectedKeyframe selection data
+        , maybe (keyframeProperty selection) <| selectedKeyframe selection data
         ]
 
 
@@ -29,8 +30,8 @@ celProperty cel =
         ]
 
 
-keyframeProperty : Keyframe -> Html Msg
-keyframeProperty keyframe =
+keyframeProperty : Path -> Keyframe -> Html Msg
+keyframeProperty path keyframe =
     div [ class "bg-gray-700 m-px p-2" ]
         [ p [] [ text keyframe.name ]
         , div [ class "bg-gray-700 m-px" ]
@@ -39,11 +40,22 @@ keyframeProperty keyframe =
                 [ class "bg-gray-800"
                 , onClick <| FileAction FileSelect
                 ]
-                [ maybe (text << File.name << Tuple.first) keyframe.image
+                [ text <| imageName keyframe.image
                 , icon_ "folder-open"
                 ]
             ]
-        , img [ src <| Maybe.unwrap "" Tuple.second <| keyframe.image] []
+        , img
+            [ src <| keyframe.image.src
+            , Attr.map (FileAction << GotImageSize path) <|
+                Events.on "load" targetImgSize
+            ]
+            []
+        , p []
+            [ text <| String.fromFloat <| Tuple.first keyframe.image.size
+            , text "px × "
+            , text <| String.fromFloat <| Tuple.second keyframe.image.size
+            , text "px"
+            ]
         , p []
             [ button
                 [ class "bg-gray-800 hover:bg-gray-900 w-full my-1"

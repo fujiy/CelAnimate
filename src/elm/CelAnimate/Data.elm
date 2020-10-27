@@ -35,9 +35,17 @@ type alias Cel =
 
 type alias Keyframe =
     { name : String
-    , image : Maybe ( File, String )
+    , image : Image
     , mesh : Mesh
     , vector : ParameterVector
+    }
+
+
+type alias Image =
+    { file : Maybe File
+    , src : String
+    , size : ( Float, Float )
+    , ppm : Float
     }
 
 
@@ -62,6 +70,14 @@ type ParameterKind
     | Between { min : Float, max : Float }
     | Cyclic { from : Float, to : Float }
     | Enum Int
+
+
+type alias Tool =
+    { center : Vec3
+    , direction : Vec3
+    , u : Vec3
+    , v : Vec3
+    }
 
 
 minimumValue : ParameterDesc -> Float
@@ -139,18 +155,27 @@ zeroCel =
 zeroKeyframe : Keyframe
 zeroKeyframe =
     { name = "keyframe0"
-    , image = Nothing
+    , image = zeroImage
     , mesh = emptyMesh
     , vector = Dict.empty
     }
 
 
-type alias Tool =
-    { center : Vec3
-    , direction : Vec3
-    , u : Vec3
-    , v : Vec3
+zeroImage : Image
+zeroImage =
+    { file = Nothing
+    , src = ""
+    , size = ( 0, 0 )
+    , ppm = 500
     }
+
+
+imageName : Image -> String
+imageName image =
+    Maybe.unwrap "" File.name image.file
+
+isLoaded : Image -> Bool
+isLoaded image = Maybe.isJust image.file
 
 
 matchCel : Path -> Path -> Bool

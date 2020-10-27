@@ -34,6 +34,14 @@ targetSelected =
     Decode.at [ "target", "selected" ] Decode.bool
 
 
+targetImgSize : Decode.Decoder ( Float, Float )
+targetImgSize =
+    DOM.target <|
+        Decode.map2 Tuple.pair
+            (Decode.field "naturalWidth" Decode.float)
+            (Decode.field "naturalHeight" Decode.float)
+
+
 onResize : (Rectangle -> msg) -> Attribute msg
 onResize tagger =
     on "resize" (Decode.map tagger <| target boundingClientRect)

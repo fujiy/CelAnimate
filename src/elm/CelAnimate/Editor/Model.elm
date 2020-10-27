@@ -49,6 +49,7 @@ type FileMsg
     = FileSelect
     | FileSelected File
     | FileLoaded File String
+    | GotImageSize Path ( Float, Float )
 
 
 type alias Model =

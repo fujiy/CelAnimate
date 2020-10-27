@@ -24,6 +24,7 @@ import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
 import Html.Events.Extra.Pointer as Pointer
 import Math.Vector3 as Vec3 exposing (Vec3)
+import Maybe.Extra as Maybe
 import Platform.Cmd
 import Task
 
@@ -78,16 +79,20 @@ update message model =
             let
                 mode =
                     case model.mode of
-                        MeshEditMode state _ mesh -> 
+                        MeshEditMode state _ mesh ->
                             let
                                 result =
                                     MeshEdit.input model.toolSettings
                                         state
                                         msg
                                         mesh
+
+                                image =
+                                    Maybe.unwrap zeroImage (.image) <|
+                                      selectedKeyframe model.selection model.data
                             in
                             MeshEditMode result.progress result.using <|
-                                Maybe.withDefault mesh result.commit
+                                Maybe.unwrap mesh (\f -> f image) result.commit
 
                         MorphMode ->
                             MorphMode
@@ -136,10 +141,37 @@ update message model =
                     )
 
                 FileLoaded file url ->
+                    let
+                        updateImage image =
+                            { image
+                                | file = Just file
+                                , src = url
+                            }
+                    in
                     ( { model
                         | data =
                             updateKeyframe model.selection
-                                (\keyframe -> { keyframe | image = Just ( file, url ) })
+                                (\keyframe ->
+                                    { keyframe
+                                        | image = updateImage keyframe.image
+                                    }
+                                )
+                                model.data
+                      }
+                    , Cmd.none
+                    )
+
+                GotImageSize path size ->
+                    let
+                        setSize image =
+                            { image | size = size }
+                    in
+                    ( { model
+                        | data =
+                            updateKeyframe path
+                                (\keyframe ->
+                                    { keyframe | image = setSize keyframe.image }
+                                )
                                 model.data
                       }
                     , Cmd.none

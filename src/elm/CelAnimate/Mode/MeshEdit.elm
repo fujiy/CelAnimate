@@ -14,8 +14,8 @@ import Maybe.Extra as Maybe
 
 type alias Result =
     { progress : MeshEditToolState
-    , using: Bool
-    , commit : Maybe Mesh
+    , using : Bool
+    , commit : Maybe (Image -> Mesh)
     }
 
 
@@ -25,7 +25,7 @@ clearKeyframe keyframe =
 
 
 start : Keyframe -> ModeState
-start keyframe = 
+start keyframe =
     MeshEditMode initMeshEditTool True keyframe.mesh
 
 
@@ -38,12 +38,19 @@ inProgress : MeshEditToolState -> Result
 inProgress state =
     Result state True Nothing
 
-progress : MeshEditToolState -> Mesh
-progress toolState =
+
+progress : Image -> MeshEditToolState -> Mesh
+progress image toolState =
     case toolState of
-        PolygonMove state -> PolygonMove.progress state
-        PolygonDraw state -> PolygonDraw.progress state
-        PolygonErase state -> PolygonErase.progress state
+        PolygonMove state ->
+            PolygonMove.progress image state
+
+        PolygonDraw state ->
+            PolygonDraw.progress image state
+
+        PolygonErase state ->
+            PolygonErase.progress image state
+
 
 input :
     ToolSettings
@@ -74,7 +81,7 @@ input settings toolState msg mesh =
                 ToolFinish ->
                     { progress = PolygonDraw PolygonDraw.initState
                     , using = False
-                    , commit = Just <| PolygonDraw.finish state
+                    , commit = Just <| \image -> PolygonDraw.finish image state
                     }
 
                 _ ->
@@ -101,7 +108,7 @@ input settings toolState msg mesh =
                 ToolFinish ->
                     { progress = PolygonErase PolygonErase.initState
                     , using = False
-                    , commit = Just <| PolygonErase.finish state
+                    , commit = Just <| \image -> PolygonErase.finish image state
                     }
 
                 _ ->
@@ -128,7 +135,7 @@ input settings toolState msg mesh =
                 ToolFinish ->
                     { progress = PolygonMove PolygonMove.initState
                     , using = False
-                    , commit = Just <| PolygonMove.finish state
+                    , commit = Just <| \image -> PolygonMove.finish image state
                     }
 
                 _ ->
