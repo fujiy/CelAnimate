@@ -19,19 +19,19 @@ type alias Result =
     }
 
 
-clearKeyframe : Keyframe -> Keyframe
-clearKeyframe keyframe =
-    { keyframe | mesh = emptyMesh }
+clearCel : Cel -> Cel
+clearCel cel =
+    { cel | mesh = emptyMesh }
 
 
-start : Keyframe -> ModeState
-start keyframe =
-    MeshEditMode initMeshEditTool True keyframe.mesh
+start : Cel -> ModeState
+start cel =
+    MeshEditMode initMeshEditTool True cel.mesh
 
 
 finish : Mesh -> Selection -> Data -> Data
 finish mesh selection =
-    updateKeyframe selection (\keyframe -> { keyframe | mesh = mesh })
+    updateCel selection (\cel -> { cel | mesh = mesh })
 
 
 inProgress : MeshEditToolState -> Result

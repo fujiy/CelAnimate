@@ -30,78 +30,78 @@ view selection data =
                 [ class
                     "bg-gray-700 shadow-xl w-32 "
                 ]
-                [ contextMenuItem "New Cel" <| ModifyData newCel
+                [ contextMenuItem "New Part" <| ModifyData newPart
                 ]
             ]
             :: Array.indexedMapToList
-                (\i cel -> celView selection (Path i -1) cel)
-                data.cels
+                (\i part -> partView selection (Path i -1) part)
+                data.parts
 
 
-celView : Selection -> Path -> Cel -> Html Msg
-celView selection this cel =
+partView : Selection -> Path -> Part -> Html Msg
+partView selection this part =
     node "tree-group"
         [ class <|
             """flex items-center select-none m-px 
                flex-grow-0 flex-shrink-0 z-10 
                "overflow-visible"""
-        , boolAttr "selected" <| matchCel selection this
+        , boolAttr "selected" <| matchPart selection this
         , onSelected <| \_ -> SelectData this
         ]
     <|
         div
             [ class "group pointer-events-auto overflow-visible"
-            , selectionColor <| matchCel selection this
+            , selectionColor <| matchPart selection this
             ]
             [ icon_ "chevron-down"
             , span
                 [ class <| "pointer-events-auto" ]
-                [ text cel.name ]
+                [ text part.name ]
             , node "context-menu"
                 [ class
                     "bg-gray-700 shadow-xl w-32 "
                 ]
-                [ contextMenuItem "New Keyframe" <|
-                    ModifyData <|
-                        \_ -> newKeyframe this
-                , contextMenuItem "New Cel" <|
+                [ contextMenuItem "New Cel" <|
                     ModifyData <|
                         \_ -> newCel this
-                , contextMenuItem "Delete Cel" <|
+                , contextMenuItem "New Part" <|
                     ModifyData <|
-                        \_ -> deleteCel this
+                        \_ -> newPart this
+                , contextMenuItem "Delete Part" <|
+                    ModifyData <|
+                        \_ -> deletePart this
                 ]
             ]
             :: Array.indexedMapToList
-                (\k keyframe ->
-                    keyframeView selection
-                        { this | keyframe = k }
-                        keyframe
+                (\k cel ->
+                    celView selection
+                        { this | cel = k }
+                        cel
                 )
-                cel.keyframes
+                part.cels
 
 
-keyframeView : Selection -> Selection -> Keyframe -> Html Msg
-keyframeView selection this keyframe =
+celView : Selection -> Selection -> Cel -> Html Msg
+celView selection this cel =
     node "tree-item"
         [ class "pl-4 my-px pointer-events-auto "
-        , selectionColor <| matchKeyframe selection this
-        , selected <| matchKeyframe selection this
+        , selectionColor <| matchCel selection this
+        , selected <| matchCel selection this
         , onSelected (\_ -> SelectData this)
         ]
         [ span
             [ class "px-1" ]
-            [ text keyframe.name ]
+            [ text cel.name ]
         , node "context-menu"
             [ class
                 "bg-gray-700 shadow-xl w-32 "
             ]
-            [ contextMenuItem "New Keyframe" <|
+            [ contextMenuItem "New Cel" <|
                 ModifyData <|
-                    \_ -> newKeyframe this
-            , contextMenuItem "Delete Keyframe" <|
+                    \_ -> newCel this
+            , contextMenuItem "Delete Cel" <|
                 ModifyData <|
-                    \_ -> deleteKeyframe this
+                    \_ -> deleteCel this
             ]
         ]
 

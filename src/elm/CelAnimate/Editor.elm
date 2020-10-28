@@ -87,7 +87,7 @@ update message model =
 
                                 image =
                                     Maybe.unwrap zeroImage .image <|
-                                        selectedKeyframe model.selection model.data
+                                        selectedCel model.selection model.data
                             in
                             MeshEditMode result.progress result.using <|
                                 Maybe.unwrap mesh (\f -> f image) result.commit
@@ -148,7 +148,7 @@ update message model =
                     in
                     ( { model
                         | data =
-                            updateKeyframe model.selection
+                            updateCel model.selection
                                 (\keyframe ->
                                     { keyframe
                                         | image = updateImage keyframe.image
@@ -166,7 +166,7 @@ update message model =
                     in
                     ( { model
                         | data =
-                            updateKeyframe path
+                            updateCel path
                                 (\keyframe ->
                                     { keyframe | image = setSize keyframe.image }
                                 )

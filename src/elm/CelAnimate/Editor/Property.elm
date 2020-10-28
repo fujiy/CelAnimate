@@ -18,42 +18,42 @@ import Tuple
 view : Selection -> Data -> Html Msg
 view selection data =
     div [ class "flex flex-col w-48 bg-gray-800 p-px" ]
-        [ maybe celProperty <| selectedCel selection data
-        , maybe (keyframeProperty selection) <| selectedKeyframe selection data
+        [ maybe partProperty <| selectedPart selection data
+        , maybe (celProperty selection) <| selectedCel selection data
         ]
 
 
-celProperty : Cel -> Html Msg
-celProperty cel =
+partProperty : Part -> Html Msg
+partProperty part =
+    div [ class "bg-gray-700 m-px p-2" ]
+        [ p [] [ text part.name ]
+        ]
+
+
+celProperty : Path -> Cel -> Html Msg
+celProperty path cel =
     div [ class "bg-gray-700 m-px p-2" ]
         [ p [] [ text cel.name ]
-        ]
-
-
-keyframeProperty : Path -> Keyframe -> Html Msg
-keyframeProperty path keyframe =
-    div [ class "bg-gray-700 m-px p-2" ]
-        [ p [] [ text keyframe.name ]
         , div [ class "bg-gray-700 m-px" ]
             [ icon_ "image"
             , button
                 [ class "bg-gray-800"
                 , onClick <| FileAction FileSelect
                 ]
-                [ text <| imageName keyframe.image
+                [ text <| imageName cel.image
                 , icon_ "folder-open"
                 ]
             ]
         , img
-            [ src <| keyframe.image.src
+            [ src <| cel.image.src
             , Attr.map (FileAction << GotImageSize path) <|
                 Events.on "load" targetImgSize
             ]
             []
         , p []
-            [ text <| String.fromFloat <| Tuple.first keyframe.image.size
+            [ text <| String.fromFloat <| Tuple.first cel.image.size
             , text "px × "
-            , text <| String.fromFloat <| Tuple.second keyframe.image.size
+            , text <| String.fromFloat <| Tuple.second cel.image.size
             , text "px"
             ]
         , p []
@@ -63,10 +63,10 @@ keyframeProperty path keyframe =
                     Batch
                         (ModifyData <|
                             \selection ->
-                                updateKeyframe selection MeshEdit.clearKeyframe
+                                updateCel selection MeshEdit.clearCel
                         )
                         (SwitchMode <|
-                            MeshEdit.start keyframe
+                            MeshEdit.start cel
                         )
                 ]
                 [ text "Create Meshes" ]

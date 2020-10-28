@@ -53,11 +53,11 @@ modelScene model =
         ]
         [ case model.mode of
             MorphMode ->
-                body model.selection model.parameters model.data.cels
+                body model.selection model.parameters model.data.parts
 
             MeshEditMode state using mesh ->
-                selectedKeyframe model.selection model.data
-                    |> maybe (\keyframe -> editingKeyframe keyframe mesh)
+                selectedCel model.selection model.data
+                    |> maybe (\cel -> editingCel cel mesh)
         ]
 
 
@@ -65,14 +65,14 @@ toolScene : Model -> Scene msg
 toolScene model =
     node "three-scene"
         [ id "tool-scene" ]
-        [ toolView model.mode <| selectedKeyframe model.selection model.data
+        [ toolView model.mode <| selectedCel model.selection model.data
         , cursorObject model
         ]
 
 
-editingKeyframe : Keyframe -> Mesh -> Three msg
-editingKeyframe keyframe mesh =
-    imagePlane keyframe.image
+editingCel : Cel -> Mesh -> Three msg
+editingCel cel mesh =
+    imagePlane cel.image
 
 
 imagePlane : Image -> Three msg
@@ -96,7 +96,7 @@ imagePlane image =
         text ""
 
 
-toolView : ModeState -> Maybe Keyframe -> Three msg
+toolView : ModeState -> Maybe Cel -> Three msg
 toolView mode mk =
     node "three-group"
         []
@@ -107,19 +107,19 @@ toolView mode mk =
             MeshEditMode state using mesh ->
                 if using then
                     maybe
-                        (\keyframe ->
-                            meshObject True keyframe.image <|
-                                MeshEdit.progress keyframe.image state
+                        (\cel ->
+                            meshObject True cel.image <|
+                                MeshEdit.progress cel.image state
                         )
                         mk
 
                 else
-                    maybe (\keyframe -> meshObject True keyframe.image mesh) mk
+                    maybe (\cel -> meshObject True cel.image mesh) mk
         ]
 
 
-body : Selection -> ParameterVector -> Array Cel -> Three msg
-body selection pv cels =
+body : Selection -> ParameterVector -> Array Part -> Three msg
+body selection pv parts =
     let
         pitch =
             Dict.get "pitch" pv |> Maybe.unwrap 0 degrees
@@ -136,13 +136,13 @@ body selection pv cels =
         List.append
             [ node "axes-helper" [] [] ]
         <|
-            Array.mapToList (celObject selection) cels
+            Array.mapToList (partObject selection) parts
 
 
-celObject : Selection -> Cel -> Three msg
-celObject selection cel =
-    maybe (\keyframe -> meshObject False keyframe.image keyframe.mesh)
-        (Array.get selection.keyframe cel.keyframes)
+partObject : Selection -> Part -> Three msg
+partObject selection part =
+    maybe (\cel -> meshObject False cel.image cel.mesh)
+        (Array.get selection.cel part.cels)
 
 
 meshObject : Bool -> Image -> Mesh -> Three msg

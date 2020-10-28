@@ -11,8 +11,8 @@ import Maybe.Extra as Maybe
 
 
 type alias Path =
-    { cel : Int
-    , keyframe : Int
+    { part : Int
+    , cel : Int
     }
 
 
@@ -22,18 +22,18 @@ type alias Selection =
 
 type alias Data =
     { name : String
-    , cels : Array Cel
+    , parts : Array Part
     }
 
 
-type alias Cel =
+type alias Part =
     { name : String
-    , keyframes : Array Keyframe
+    , cels : Array Cel
     , parameters : Dict String ParameterDesc
     }
 
 
-type alias Keyframe =
+type alias Cel =
     { name : String
     , image : Image
     , mesh : Mesh
@@ -140,21 +140,21 @@ parameters =
 zeroData : Data
 zeroData =
     { name = "untitled"
-    , cels = Array.empty
+    , parts = Array.empty
+    }
+
+
+zeroPart : Part
+zeroPart =
+    { name = "part0"
+    , cels = Array.fromList [ zeroCel ]
+    , parameters = Dict.empty
     }
 
 
 zeroCel : Cel
 zeroCel =
-    { name = "cel"
-    , keyframes = Array.fromList [ zeroKeyframe ]
-    , parameters = Dict.empty
-    }
-
-
-zeroKeyframe : Keyframe
-zeroKeyframe =
-    { name = "keyframe0"
+    { name = "cel0"
     , image = zeroImage
     , mesh = emptyMesh
     , vector = Dict.empty
@@ -180,84 +180,84 @@ isLoaded image =
     Maybe.isJust image.file
 
 
+matchPart : Path -> Path -> Bool
+matchPart a b =
+    a.part == b.part
+
+
 matchCel : Path -> Path -> Bool
 matchCel a b =
-    a.cel == b.cel
+    a.part == b.part && a.cel == b.cel
 
 
-matchKeyframe : Path -> Path -> Bool
-matchKeyframe a b =
-    a.cel == b.cel && a.keyframe == b.keyframe
+selectedPart : Path -> Data -> Maybe Part
+selectedPart selection data =
+    Array.get selection.part data.parts
 
 
 selectedCel : Path -> Data -> Maybe Cel
 selectedCel selection data =
-    Array.get selection.cel data.cels
+    selectedPart selection data
+        |> Maybe.andThen (.cels >> Array.get selection.cel)
 
 
-selectedKeyframe : Path -> Data -> Maybe Keyframe
-selectedKeyframe selection data =
-    selectedCel selection data
-        |> Maybe.andThen (.keyframes >> Array.get selection.keyframe)
+updatePart : Path -> (Part -> Part) -> Data -> Data
+updatePart selection f data =
+    { data | parts = Array.update selection.part f data.parts }
 
 
 updateCel : Path -> (Cel -> Cel) -> Data -> Data
 updateCel selection f data =
-    { data | cels = Array.update selection.cel f data.cels }
-
-
-updateKeyframe : Path -> (Keyframe -> Keyframe) -> Data -> Data
-updateKeyframe selection f data =
     let
-        update cel =
-            { cel
-                | keyframes =
-                    Array.update selection.keyframe f cel.keyframes
+        update part =
+            { part
+                | cels =
+                    Array.update selection.cel f part.cels
             }
     in
-    updateCel selection update data
+    updatePart selection update data
+
+
+newPart : Path -> Data -> Data
+newPart _ data =
+    let
+        part =
+            { zeroPart
+                | name = "part" ++ String.fromInt (Array.length data.parts)
+            }
+    in
+    { data | parts = Array.push part data.parts }
+
+
+deletePart : Path -> Data -> Data
+deletePart at data =
+    { data | parts = Array.removeAt at.part data.parts }
 
 
 newCel : Path -> Data -> Data
-newCel _ data =
-    let
-        cel =
-            { zeroCel
-                | name = "cel" ++ String.fromInt (Array.length data.cels)
-            }
-    in
-    { data | cels = Array.push cel data.cels }
-
-
-deleteCel : Path -> Data -> Data
-deleteCel at data =
-    { data | cels = Array.removeAt at.cel data.cels }
-
-
-newKeyframe : Path -> Data -> Data
-newKeyframe at data =
+newCel at data =
     let
         k =
-            selectedCel at data
-                |> Maybe.unwrap 0 (.keyframes >> Array.length)
+            selectedPart at data
+                |> Maybe.unwrap 0 (.cels >> Array.length)
 
-        keyframe =
-            { zeroKeyframe
+        cel =
+            { zeroCel
                 | name =
-                    "keyframe" ++ String.fromInt k
+                    "cel" ++ String.fromInt k
             }
     in
-    updateCel at
-        (\c -> { c | keyframes = Array.push keyframe c.keyframes })
+    updatePart at
+        (\p -> { p | cels = Array.push cel p.cels })
         data
 
 
-deleteKeyframe : Path -> Data -> Data
-deleteKeyframe at =
-    updateCel at
-        (\cel ->
-            { cel
-                | keyframes =
-                    Array.removeAt at.keyframe cel.keyframes
+deleteCel : Path -> Data -> Data
+deleteCel at =
+    updatePart at
+        (\part ->
+            { part
+                | cels =
+                    Array.removeAt at.cel part.cels
             }
         )

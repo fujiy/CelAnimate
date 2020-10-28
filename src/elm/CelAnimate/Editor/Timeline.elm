@@ -27,11 +27,11 @@ type ParameterMsg
 view : ParameterVector -> Selection -> Data -> Html Msg
 view pv selection data =
     let
-        mcel =
-            selectedCel selection data
+        mpart =
+            selectedPart selection data
 
         usingParams =
-            Maybe.map .parameters mcel
+            Maybe.map .parameters mpart
                 |> Maybe.withDefault Dict.empty
                 |> Dict.values
                 |> List.map (\p -> p.name)
@@ -129,17 +129,17 @@ slider using min max value =
 useParameter : ParameterDesc -> Bool -> Selection -> Data -> Data
 useParameter desc use selection data =
     let
-        update cel =
-            { cel
+        update part =
+            { part
                 | parameters =
                     if use then
-                        Dict.insert desc.name desc cel.parameters
+                        Dict.insert desc.name desc part.parameters
 
                     else
-                        Dict.remove desc.name cel.parameters
+                        Dict.remove desc.name part.parameters
             }
     in
-    updateCel selection update data
+    updatePart selection update data
 
 
 dragX : (Float -> Float) -> Decoder Float
