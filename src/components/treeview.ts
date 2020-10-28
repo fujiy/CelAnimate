@@ -21,11 +21,9 @@ export class TreeGroup extends HTMLElement {
         Array.from(this.getElementsByClassName('group')).forEach(x => {
             if (x.parentElement != this) return
             x.addEventListener('click', _ => {
-                if (!this.selected) {
-                    this.selected = true
-                    const event = new Event("change")
-                    this.dispatchEvent(event)
-                }
+                this.selected = true
+                const event = new Event("change")
+                this.dispatchEvent(event)
             })
         })
     }

@@ -52,11 +52,12 @@ modelScene model =
         , attribute "background" "#1A202C"
         ]
         [ case model.mode of
-              MorphMode ->
-               body model.selection model.parameters model.data.cels
-              MeshEditMode state using mesh ->
-                  selectedKeyframe model.selection model.data |>
-                  maybe (\keyframe -> editingKeyframe keyframe mesh)
+            MorphMode ->
+                body model.selection model.parameters model.data.cels
+
+            MeshEditMode state using mesh ->
+                selectedKeyframe model.selection model.data
+                    |> maybe (\keyframe -> editingKeyframe keyframe mesh)
         ]
 
 
@@ -73,23 +74,27 @@ editingKeyframe : Keyframe -> Mesh -> Three msg
 editingKeyframe keyframe mesh =
     imagePlane keyframe.image
 
+
 imagePlane : Image -> Three msg
 imagePlane image =
     if isLoaded image then
         node "three-mesh"
             []
             [ node "geometry-plane"
-                  [ floatAttr "width" <| Tuple.first image.size / image.ppm
-                  , floatAttr "height" <| Tuple.second image.size / image.ppm
-                  ]
-                  []
+                [ floatAttr "width" <| Tuple.first image.size / image.ppm
+                , floatAttr "height" <| Tuple.second image.size / image.ppm
+                ]
+                []
             , node "material-mesh-basic"
                 [ boolAttr "transparent" True
                 , floatAttr "opacity" 0.5
                 ]
-                  [ node "three-texture" [ src image.src ] [] ]
+                [ node "three-texture" [ src image.src ] [] ]
             ]
-    else text ""
+
+    else
+        text ""
+
 
 toolView : ModeState -> Maybe Keyframe -> Three msg
 toolView mode mk =
@@ -101,10 +106,12 @@ toolView mode mk =
 
             MeshEditMode state using mesh ->
                 if using then
-                    maybe (\keyframe -> 
-                           meshObject True keyframe.image <|
-                               MeshEdit.progress keyframe.image state)
-                    mk
+                    maybe
+                        (\keyframe ->
+                            meshObject True keyframe.image <|
+                                MeshEdit.progress keyframe.image state
+                        )
+                        mk
 
                 else
                     maybe (\keyframe -> meshObject True keyframe.image mesh) mk
@@ -177,19 +184,21 @@ meshObject showMesh image mesh =
                 , property "uvs" uvs
                 ]
                 []
-            ,  if isLoaded image then
-                   Html.node "material-mesh-basic"
-                       [ boolAttr "transparent" True]
-                  [ node "three-texture" [ src image.src ] [] ]
-               else
-                   Html.node "material-mesh-basic"
-                [ attribute "color" "white"
-                , boolAttr "transparent" True
-                , floatAttr "opacity" 0.5
-                ]
-                []
+            , if isLoaded image then
+                Html.node "material-mesh-basic"
+                    [ boolAttr "transparent" True ]
+                    [ node "three-texture" [ src image.src ] [] ]
+
+              else
+                Html.node "material-mesh-basic"
+                    [ attribute "color" "white"
+                    , boolAttr "transparent" True
+                    , floatAttr "opacity" 0.5
+                    ]
+                    []
             ]
         ]
+
 
 camera : CameraState -> Three msg
 camera state =
@@ -212,12 +221,24 @@ cursorObject model =
         [ node "geometry-edges"
             []
             [ node "geometry-circle"
-                [ floatAttr "radius"
-                    model.toolSettings.polygonDraw.radius
+                [ floatAttr "radius" <|
+                    case model.mode of
+                        MorphMode ->
+                            0.01
+
+                        MeshEditMode state _ _ ->
+                            case state of
+                                PolygonMove _ ->
+                                    model.toolSettings.polygonMove.radius
+
+                                PolygonDraw _ ->
+                                    model.toolSettings.polygonDraw.radius
+
+                                PolygonErase _ ->
+                                    model.toolSettings.polygonErase.radius
                 , intAttr "segments" 16
                 ]
                 []
             ]
         , node "material-line-basic" [ attribute "color" "white" ] []
         ]
-

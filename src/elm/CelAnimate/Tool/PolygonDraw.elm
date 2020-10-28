@@ -41,17 +41,18 @@ start settings tool mesh =
 
 progress : Image -> State -> Mesh
 progress image state =
-    uvMap image.size image.ppm 
-    { vertices =
-        KdTree.toArray state.kdTree
-            |> Array.sortBy Tuple.first
-            |> Array.map Tuple.second
-    , faces = state.polygons
-    , mapping = Array.empty
-    }
+    uvMap image.size
+        image.ppm
+        { vertices =
+            KdTree.toArray state.kdTree
+                |> Array.sortBy Tuple.first
+                |> Array.map Tuple.second
+        , faces = state.polygons
+        , mapping = Array.empty
+        }
 
 
-finish :Image -> State -> Mesh
+finish : Image -> State -> Mesh
 finish =
     progress
 

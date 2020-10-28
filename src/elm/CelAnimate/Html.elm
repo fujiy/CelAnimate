@@ -2,12 +2,13 @@ module CelAnimate.Html exposing (..)
 
 import CelAnimate.Algebra exposing (..)
 import DOM exposing (..)
-import Html exposing (Attribute, Html, i, span, text)
-import Html.Attributes exposing (attribute, class, property)
-import Html.Events exposing (on)
+import Html exposing (Attribute, Html, i, input, span, text)
+import Html.Attributes exposing (attribute, class, property, type_, value)
+import Html.Events exposing (on, onInput)
 import Json.Decode as Decode
 import Math.Vector3 as Vec3 exposing (Vec3)
 import Maybe.Extra as Maybe
+import Round
 
 
 type alias Three msg =
@@ -22,6 +23,20 @@ icon name =
 icon_ : String -> Html msg
 icon_ name =
     span [ class "p-1" ] [ i [ class <| "select-none fas fa-" ++ name ] [] ]
+
+
+slider : Float -> Float -> Float -> Int -> Float -> Html Float
+slider min max step round x =
+    input
+        [ type_ "range"
+        , class "w-32"
+        , value <| Round.round round x
+        , onInput <| Maybe.withDefault x << String.toFloat
+        , floatAttr "min" min
+        , floatAttr "max" max
+        , floatAttr "step" step
+        ]
+        []
 
 
 onSelected : (Bool -> msg) -> Attribute msg

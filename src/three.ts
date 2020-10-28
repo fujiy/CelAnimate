@@ -80,6 +80,7 @@ class ThreeCanvas extends ThreeElement {
             this.renderer.setClearColor(0x000000)
             this.renderer.autoClear = false
 
+
             for (const scene of this.scenes) {
                 const camera = scene.camera || this.camera
                 if (camera.autoAspect) {

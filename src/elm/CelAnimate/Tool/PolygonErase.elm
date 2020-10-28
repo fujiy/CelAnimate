@@ -100,21 +100,22 @@ progress image state =
                 |> Maybe.join
                 |> Maybe.withDefault -1
     in
-    uvMap image.size image.ppm 
-    { vertices =
-        KdTree.toList state.kdTree
-            |> List.sortBy Tuple.first
-            |> List.filterMap
-                (\( i, v ) ->
-                    if Set.member i remainIndices then
-                        Just v
+    uvMap image.size
+        image.ppm
+        { vertices =
+            KdTree.toList state.kdTree
+                |> List.sortBy Tuple.first
+                |> List.filterMap
+                    (\( i, v ) ->
+                        if Set.member i remainIndices then
+                            Just v
 
-                    else
-                        Nothing
-                )
-            |> Array.fromList
-    , faces =
-        remainFaces
-            |> Array.map (\( i, j, k ) -> ( convert i, convert j, convert k ))
-    , mapping = Array.empty
-    }
+                        else
+                            Nothing
+                    )
+                |> Array.fromList
+        , faces =
+            remainFaces
+                |> Array.map (\( i, j, k ) -> ( convert i, convert j, convert k ))
+        , mapping = Array.empty
+        }

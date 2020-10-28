@@ -174,8 +174,10 @@ imageName : Image -> String
 imageName image =
     Maybe.unwrap "" File.name image.file
 
+
 isLoaded : Image -> Bool
-isLoaded image = Maybe.isJust image.file
+isLoaded image =
+    Maybe.isJust image.file
 
 
 matchCel : Path -> Path -> Bool

@@ -7,6 +7,7 @@ import { ThreeMaterial } from './material'
 
 
 export class ThreeMesh extends ThreeObject {
+    object3d: THREE.Mesh
     didConnect() {
         const geometry: ThreeGeometry = this.childIs(ThreeGeometry)
         const material: ThreeMaterial = this.childIs(ThreeMaterial)
@@ -17,9 +18,13 @@ export class ThreeMesh extends ThreeObject {
 
         super.didConnect()
     }
+    updateGeometry(geometry: ThreeGeometry) {
+        this.object3d.geometry = geometry.geometry
+    }
 }
 
 export class ThreeLineSegments extends ThreeObject {
+    object3d: THREE.Line
     didConnect() {
         const geometry: ThreeGeometry = this.childIs(ThreeGeometry)
         const material: ThreeMaterial = this.childIs(ThreeMaterial)
@@ -29,6 +34,11 @@ export class ThreeLineSegments extends ThreeObject {
                 material && material.material)
 
         super.didConnect()
+    }
+    updateGeometry() {
+        // console.log(this.childIs(ThreeGeometry), this)
+        this.object3d.geometry =
+            (this.childIs(ThreeGeometry) as ThreeGeometry).geometry
     }
 }
 

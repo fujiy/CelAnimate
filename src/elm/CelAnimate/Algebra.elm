@@ -10,7 +10,10 @@ import Math.Vector3 as Vec3 exposing (Vec3)
 type alias Index =
     Int
 
-type alias UVVec = Vec2
+
+type alias UVVec =
+    Vec2
+
 
 type alias Vertices =
     Array Vec3
@@ -26,6 +29,7 @@ type alias Face =
 
 type alias Faces =
     Array Face
+
 
 type alias Mesh =
     { vertices : Vertices
@@ -106,13 +110,15 @@ encodeVec3 : Vec3 -> Encode.Value
 encodeVec3 v =
     Encode.list Encode.float [ Vec3.getX v, Vec3.getY v, Vec3.getZ v ]
 
+
 encodeFace : Face -> Encode.Value
 encodeFace ( i, j, k ) =
     Encode.list Encode.int [ i, j, k ]
 
+
 encodeUVVec : UVVec -> Encode.Value
 encodeUVVec v =
-    Encode.list Encode.float [ Vec2.getX v, Vec2.getY v]
+    Encode.list Encode.float [ Vec2.getX v, Vec2.getY v ]
 
 
 verticeToArray : IndexedVertice -> Array Float
@@ -123,13 +129,20 @@ verticeToArray ( i, v ) =
     in
     Array.fromList [ r.x, r.y, r.z ]
 
-uvMap : (Float, Float) -> Float -> Mesh -> Mesh
-uvMap (width, height) ppm mesh =
-    let u x = x * ppm / width + 0.5
-        v y = y * ppm / height + 0.5
-        map p =  Vec2.vec2 (u <| Vec3.getX p) (v <| Vec3.getY p)
+
+uvMap : ( Float, Float ) -> Float -> Mesh -> Mesh
+uvMap ( width, height ) ppm mesh =
+    let
+        u x =
+            x * ppm / width + 0.5
+
+        v y =
+            y * ppm / height + 0.5
+
+        map p =
+            Vec2.vec2 (u <| Vec3.getX p) (v <| Vec3.getY p)
     in
-    {mesh | mapping = Array.map map mesh.vertices }
+    { mesh | mapping = Array.map map mesh.vertices }
 
 
 fromJust : Maybe a -> a

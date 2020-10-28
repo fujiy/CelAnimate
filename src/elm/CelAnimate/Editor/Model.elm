@@ -17,6 +17,7 @@ type Msg
     = ViewportResized Int Int
     | Pointer PointerEvent Pointer.Event
     | ToolInput ToolMsg
+    | ToolSet ToolSettings
     | SwitchMode ModeState
     | FileAction FileMsg
     | ChangeParameter ParameterDesc Float

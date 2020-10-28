@@ -17,7 +17,7 @@ view : Selection -> Data -> Html Msg
 view selection data =
     node "tree-group"
         [ class """flex flex-row items-center select-none 
-                   max-h-full bg-gray-800 z-10 
+                   h-2-3 bg-gray-800 z-10 
                    overflow-y-scroll overflow-x-visible"""
         ]
     <|

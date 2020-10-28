@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { CircleBufferGeometry } from 'three';
 
 import { ThreeElement } from './element'
+import { ThreeMesh } from './mesh'
 
 export class ThreeGeometry extends ThreeElement {
     geometry: THREE.BufferGeometry = null
@@ -107,6 +108,27 @@ export class PlaneGeometry extends ThreeGeometry {
 }
 
 export class CircleGeometry extends ThreeGeometry {
+
+    static get observedAttributes(): string[] {
+        return ['radius']
+    }
+
+    attrChanged(name: string, value: any) {
+        super.attrChanged(name, value)
+        if (name == "radius") {
+            this.geometry = new THREE.CircleBufferGeometry(
+                this.numAttr("radius"),
+                this.numAttr("segments"),
+                this.numAttr("thetaStart"),
+                this.numAttr("thetaLength"));
+
+            // console.log(this, value, this.parentElement)
+            if (this.parentElement && this.parentElement["updateGeometry"]) {
+                (this.parentElement as any).updateGeometry()
+            }
+        }
+    }
+
     willConnect() {
         this.geometry = new THREE.CircleBufferGeometry(
             this.numAttr("radius"),
@@ -123,6 +145,14 @@ export class EdgesGeometry extends ThreeGeometry {
     didConnect() {
         const geometry: ThreeGeometry = this.childIs(ThreeGeometry)
         this.geometry = new THREE.EdgesGeometry(geometry.geometry)
+    }
+    updateGeometry() {
+        // console.log(this.childIs(ThreeGeometry), this)
+        const geometry: ThreeGeometry = this.childIs(ThreeGeometry)
+        this.geometry = new THREE.EdgesGeometry(geometry.geometry)
+        if (this.parentElement && this.parentElement["updateGeometry"]) {
+            (this.parentElement as any).updateGeometry()
+        }
     }
 }
 
