@@ -13,6 +13,7 @@ import Maybe.Extra as Maybe
 type alias Path =
     { part : Int
     , cel : Int
+    , keyframe : Int
     }
 
 
@@ -30,6 +31,7 @@ type alias Part =
     { name : String
     , cels : Array Cel
     , parameters : Dict String ParameterDesc
+    , keyframes : Array Keyframe
     }
 
 
@@ -37,7 +39,13 @@ type alias Cel =
     { name : String
     , image : Image
     , mesh : Mesh
+    }
+
+
+type alias Keyframe =
+    { name : String
     , vector : ParameterVector
+    , cels : List { name : String, morph : Morphing }
     }
 
 
@@ -49,29 +57,6 @@ type alias Image =
     }
 
 
-type alias Parameter =
-    { desc : ParameterDesc
-    , value : Float
-    }
-
-
-type alias ParameterVector =
-    Dict String Float
-
-
-type alias ParameterDesc =
-    { name : String
-    , kind : ParameterKind
-    }
-
-
-type ParameterKind
-    = Open
-    | Between { min : Float, max : Float }
-    | Cyclic { from : Float, to : Float }
-    | Enum Int
-
-
 type alias Tool =
     { center : Vec3
     , direction : Vec3
@@ -79,57 +64,8 @@ type alias Tool =
     , v : Vec3
     }
 
-
-minimumValue : ParameterDesc -> Float
-minimumValue desc =
-    case desc.kind of
-        Open ->
-            -1
-
-        Between o ->
-            o.min
-
-        Cyclic o ->
-            o.from
-
-        Enum _ ->
-            1
-
-
-maximumValue : ParameterDesc -> Float
-maximumValue desc =
-    case desc.kind of
-        Open ->
-            1
-
-        Between o ->
-            o.max
-
-        Cyclic o ->
-            o.to
-
-        Enum n ->
-            toFloat n
-
-
-defaultValue : ParameterDesc -> Float
-defaultValue desc =
-    case desc.kind of
-        Open ->
-            0
-
-        Between o ->
-            (o.min + o.max) / 2
-
-        Cyclic o ->
-            (o.from + o.to) / 2
-
-        Enum _ ->
-            0
-
-
-parameters : Array ParameterDesc
-parameters =
+defaultParameters : Array ParameterDesc
+defaultParameters =
     Array.fromList
         [ ParameterDesc "yaw" <| Cyclic { from = -180, to = 180 }
         , ParameterDesc "pitch" <| Between { min = -90, max = 90 }
@@ -149,6 +85,7 @@ zeroPart =
     { name = "part0"
     , cels = Array.fromList [ zeroCel ]
     , parameters = Dict.empty
+    , keyframes = Array.empty
     }
 
 
@@ -157,7 +94,6 @@ zeroCel =
     { name = "cel0"
     , image = zeroImage
     , mesh = emptyMesh
-    , vector = Dict.empty
     }
 
 
@@ -201,13 +137,19 @@ selectedCel selection data =
         |> Maybe.andThen (.cels >> Array.get selection.cel)
 
 
+selectedKeyframe : Path -> Data -> Maybe Keyframe
+selectedKeyframe selection data =
+    selectedPart selection data
+        |> Maybe.andThen (.keyframes >> Array.get selection.keyframe)
+
+
 updatePart : Path -> (Part -> Part) -> Data -> Data
 updatePart selection f data =
     { data | parts = Array.update selection.part f data.parts }
 
 
 updateCel : Path -> (Cel -> Cel) -> Data -> Data
-updateCel selection f data =
+updateCel selection f =
     let
         update part =
             { part
@@ -215,7 +157,18 @@ updateCel selection f data =
                     Array.update selection.cel f part.cels
             }
     in
-    updatePart selection update data
+    updatePart selection update 
+
+updateKeyframe : Path -> (Keyframe -> Keyframe) -> Data -> Data
+updateKeyframe selection f =
+    let
+        update part =
+            { part
+                | keyframes =
+                    Array.update selection.keyframe f part.keyframes
+            }
+    in
+    updatePart selection update
 
 
 newPart : Path -> Data -> Data
@@ -261,3 +214,32 @@ deleteCel at =
                     Array.removeAt at.cel part.cels
             }
         )
+
+
+newKeyframe : ParameterVector -> List Cel -> Path -> Data -> Data
+newKeyframe pv cels at data =
+    let
+        mpart =
+            selectedPart at data
+
+        k =
+            Maybe.unwrap 0 (.keyframes >> Array.length) mpart
+
+        keyframe =
+            { name = "keyfame" ++ String.fromInt k
+            , vector =
+                Maybe.unwrap pv
+                    (\part -> extractParameters part.parameters pv)
+                    mpart
+            , cels =
+                List.map (\cel -> { name = cel.name, morph = Array.empty }) cels
+            }
+    in
+    updatePart at
+        (\part ->
+            { part
+                | keyframes =
+                    Array.push keyframe part.keyframes
+            }
+        )
+        data

@@ -32,7 +32,7 @@ init _ =
       , toolSettings = initToolSettings
       , cursor = initCursor
       , data = zeroData
-      , selection = Path -1 -1
+      , selection = Path -1 -1 -1
       , parameters = Dict.empty
       }
     , Cmd.none
@@ -59,10 +59,9 @@ update message model =
             , Cmd.none
             )
 
-        ChangeParameter desc value ->
+        ChangeParameters pv ->
             ( { model
-                | parameters =
-                    Dict.insert desc.name value model.parameters
+                | parameters = Dict.union  pv model.parameters
               }
             , Cmd.none
             )
@@ -199,7 +198,9 @@ view model =
                     [ Tool.topBar model.mode
                     , Viewport.view model
                     ]
-                , PropertyEditor.view model.selection model.data
+                , PropertyEditor.view model.parameters
+                    model.selection
+                    model.data
                 ]
             , Timeline.view model.parameters model.selection model.data
             ]

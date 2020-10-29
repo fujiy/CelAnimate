@@ -20,7 +20,7 @@ type Msg
     | ToolSet ToolSettings
     | SwitchMode ModeState
     | FileAction FileMsg
-    | ChangeParameter ParameterDesc Float
+    | ChangeParameters ParameterVector
     | SelectData Selection
     | ModifyData (Selection -> Data -> Data)
     | Batch Msg Msg

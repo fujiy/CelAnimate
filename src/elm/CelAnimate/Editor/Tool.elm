@@ -46,7 +46,7 @@ topBar mode =
                         ]
                 , div [ class """flex flex-row-reverse text-center px-4 
                              bg-gray-700""" ]
-                    [ button
+                    [ Html.button
                         [ class "bg-gray-800 hover:bg-gray-900 px-2 m-1"
                         , onClick <|
                             Batch (ModifyData <| MeshEdit.finish mesh)
@@ -164,7 +164,7 @@ toolNum state =
 
 toolIcon : String -> Bool -> MeshEditToolState -> Html MeshEditToolState
 toolIcon name now state =
-    button
+    Html.button
         [ class <|
             "w-8 h-8 select-none focus:outline-none text-xl select-none "
                 ++ (if now then

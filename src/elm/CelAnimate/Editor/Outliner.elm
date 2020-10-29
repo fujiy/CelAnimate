@@ -34,7 +34,7 @@ view selection data =
                 ]
             ]
             :: Array.indexedMapToList
-                (\i part -> partView selection (Path i -1) part)
+                (\i part -> partView selection (Path i -1 -1) part)
                 data.parts
 
 

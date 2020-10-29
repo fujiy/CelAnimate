@@ -2,9 +2,12 @@ module CelAnimate.Algebra exposing (..)
 
 import Array exposing (Array)
 import Array.More as Array
+import Dict exposing (Dict)
+import Dict.Extra as Dict
 import Json.Encode as Encode
 import Math.Vector2 as Vec2 exposing (Vec2)
 import Math.Vector3 as Vec3 exposing (Vec3)
+import Maybe.Extra as Maybe
 
 
 type alias Index =
@@ -31,11 +34,38 @@ type alias Faces =
     Array Face
 
 
+type alias Morphing =
+    Array Vec3
+
+
 type alias Mesh =
     { vertices : Vertices
     , faces : Faces
     , mapping : Array UVVec
     }
+
+
+type alias Parameter =
+    { desc : ParameterDesc
+    , value : Float
+    }
+
+
+type alias ParameterVector =
+    Dict String Float
+
+
+type alias ParameterDesc =
+    { name : String
+    , kind : ParameterKind
+    }
+
+
+type ParameterKind
+    = Open
+    | Between { min : Float, max : Float }
+    | Cyclic { from : Float, to : Float }
+    | Enum Int
 
 
 emptyMesh : Mesh
@@ -153,3 +183,92 @@ fromJust m =
 
         Nothing ->
             Debug.todo "Nothing"
+
+
+
+minimumValue : ParameterDesc -> Float
+minimumValue desc =
+    case desc.kind of
+        Open ->
+            -1
+
+        Between o ->
+            o.min
+
+        Cyclic o ->
+            o.from
+
+        Enum _ ->
+            1
+
+
+maximumValue : ParameterDesc -> Float
+maximumValue desc =
+    case desc.kind of
+        Open ->
+            1
+
+        Between o ->
+            o.max
+
+        Cyclic o ->
+            o.to
+
+        Enum n ->
+            toFloat n
+
+
+defaultValue : ParameterDesc -> Float
+defaultValue desc =
+    case desc.kind of
+        Open ->
+            0
+
+        Between o ->
+            (o.min + o.max) / 2
+
+        Cyclic o ->
+            (o.from + o.to) / 2
+
+        Enum _ ->
+            0
+
+parameterDifference : ParameterDesc -> Float -> Float -> Float
+parameterDifference desc b x =
+    if x < b then
+        (x - b) / (b - minimumValue desc)
+    else
+        (x - b) / (maximumValue desc - b)
+
+
+extractParameters :
+    Dict String ParameterDesc -> ParameterVector -> ParameterVector
+extractParameters names pv =
+    Dict.map (\name desc ->
+                  Dict.get name pv
+                  |> Maybe.withDefault (defaultValue desc) )
+        names
+
+getValue : ParameterDesc -> ParameterVector -> Float
+getValue desc vector = Dict.get desc.name vector
+                     |> Maybe.withDefault (defaultValue desc)
+
+parameterProjection :
+     Dict String ParameterDesc -> ParameterVector -> ParameterVector
+                               -> ParameterDesc -> Float
+parameterProjection names origin vector desc =
+    let
+        otherValues =
+            Dict.values names
+               |> List.filter (\d -> d.name /= desc.name)
+               |> List.map
+                  (\d -> parameterDifference d
+                       (getValue d origin) (getValue d vector))
+        sign = Maybe.unwrap 0 signum <| List.head otherValues
+        distance = List.map (\x -> x * x) otherValues |> List.sum |> sqrt
+    in sign * distance
+
+signum : Float -> Float
+signum x = if x < 0 then -1
+           else if x == 0 then 0
+                else 1

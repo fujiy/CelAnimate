@@ -4,7 +4,7 @@ import CelAnimate.Algebra exposing (..)
 import DOM exposing (..)
 import Html exposing (Attribute, Html, i, input, span, text)
 import Html.Attributes exposing (attribute, class, property, type_, value)
-import Html.Events exposing (on, onInput)
+import Html.Events exposing (on, onClick, onInput)
 import Json.Decode as Decode
 import Math.Vector3 as Vec3 exposing (Vec3)
 import Maybe.Extra as Maybe
@@ -37,6 +37,15 @@ slider min max step round x =
         , floatAttr "step" step
         ]
         []
+
+
+button : String -> msg -> Html msg
+button txt msg =
+    Html.button
+        [ class "bg-gray-800 hover:bg-gray-900 w-full my-1"
+        , onClick msg
+        ]
+        [ text txt ]
 
 
 onSelected : (Bool -> msg) -> Attribute msg
