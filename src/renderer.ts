@@ -9,6 +9,7 @@ require('@fortawesome/fontawesome-free-brands')
 import './three'
 import './components/treeview'
 import './components/contextmenu'
+import './components/slidertrack'
 import './style/main.sass'
 
 

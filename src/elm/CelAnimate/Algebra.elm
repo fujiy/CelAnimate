@@ -185,7 +185,6 @@ fromJust m =
             Debug.todo "Nothing"
 
 
-
 minimumValue : ParameterDesc -> Float
 minimumValue desc =
     case desc.kind of
@@ -233,42 +232,66 @@ defaultValue desc =
         Enum _ ->
             0
 
+
 parameterDifference : ParameterDesc -> Float -> Float -> Float
 parameterDifference desc b x =
     if x < b then
         (x - b) / (b - minimumValue desc)
+
     else
         (x - b) / (maximumValue desc - b)
 
 
-extractParameters :
-    Dict String ParameterDesc -> ParameterVector -> ParameterVector
+extractParameters : Dict String ParameterDesc -> ParameterVector -> ParameterVector
 extractParameters names pv =
-    Dict.map (\name desc ->
-                  Dict.get name pv
-                  |> Maybe.withDefault (defaultValue desc) )
+    Dict.map
+        (\name desc ->
+            Dict.get name pv
+                |> Maybe.withDefault (defaultValue desc)
+        )
         names
 
+
 getValue : ParameterDesc -> ParameterVector -> Float
-getValue desc vector = Dict.get desc.name vector
-                     |> Maybe.withDefault (defaultValue desc)
+getValue desc vector =
+    Dict.get desc.name vector
+        |> Maybe.withDefault (defaultValue desc)
+
 
 parameterProjection :
-     Dict String ParameterDesc -> ParameterVector -> ParameterVector
-                               -> ParameterDesc -> Float
+    Dict String ParameterDesc
+    -> ParameterVector
+    -> ParameterVector
+    -> ParameterDesc
+    -> Float
 parameterProjection names origin vector desc =
     let
         otherValues =
             Dict.values names
-               |> List.filter (\d -> d.name /= desc.name)
-               |> List.map
-                  (\d -> parameterDifference d
-                       (getValue d origin) (getValue d vector))
-        sign = Maybe.unwrap 0 signum <| List.head otherValues
-        distance = List.map (\x -> x * x) otherValues |> List.sum |> sqrt
-    in sign * distance
+                |> List.filter (\d -> d.name /= desc.name)
+                |> List.map
+                    (\d ->
+                        parameterDifference d
+                            (getValue d origin)
+                            (getValue d vector)
+                    )
+
+        sign =
+            Maybe.unwrap 0 signum <| List.head otherValues
+
+        distance =
+            List.map (\x -> x * x) otherValues |> List.sum |> sqrt
+    in
+    sign * distance
+
 
 signum : Float -> Float
-signum x = if x < 0 then -1
-           else if x == 0 then 0
-                else 1
+signum x =
+    if x < 0 then
+        -1
+
+    else if x == 0 then
+        0
+
+    else
+        1

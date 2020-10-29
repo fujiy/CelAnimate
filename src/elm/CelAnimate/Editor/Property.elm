@@ -10,7 +10,7 @@ import CelAnimate.Mode.MeshEdit as MeshEdit
 import Dict
 import File
 import Html exposing (Html, div, img, p, span, text)
-import Html.Attributes as Attr exposing (class, src, disabled)
+import Html.Attributes as Attr exposing (class, disabled, src)
 import Html.Events as Events exposing (onClick)
 import Maybe
 import Maybe.Extra as Maybe
@@ -75,28 +75,32 @@ celProperties path cel =
 
 keyframeProperties : ParameterVector -> Selection -> Data -> Html Msg
 keyframeProperties pv selection data =
-    maybe (\part -> 
-    div [ class "bg-gray-700 m-px p-2" ] <|
-        case selectedKeyframe selection data of
-            Nothing ->
-                [ Html.button
-                  [ class "bg-gray-800 hover:bg-gray-900 w-full"
-                   , disabled <| Dict.isEmpty part.parameters
-                  , onClick <| Batch
-                        (ModifyData <|
-                            newKeyframe pv <|
-                                Maybe.toList <|
-                                    selectedCel selection data
-                        )
-                        (SelectData
-                            { selection
-                                | keyframe = Array.length part.keyframes
-                            }
-                        )
-                          ]
-                     [text "Add Keyframe"]
-                ]
+    maybe
+        (\part ->
+            div [ class "bg-gray-700 m-px p-2" ] <|
+                case selectedKeyframe selection data of
+                    Nothing ->
+                        [ Html.button
+                            [ class "bg-gray-800 hover:bg-gray-900 w-full"
+                            , disabled <| Dict.isEmpty part.parameters
+                            , onClick <|
+                                Batch
+                                    (ModifyData <|
+                                        newKeyframe pv <|
+                                            Maybe.toList <|
+                                                selectedCel selection data
+                                    )
+                                    (SelectData
+                                        { selection
+                                            | keyframe = Array.length part.keyframes
+                                        }
+                                    )
+                            ]
+                            [ text "Add Keyframe" ]
+                        ]
 
-            Just keyframe ->
-                [ p [] [ text "Keyframe: ", text keyframe.name ] ]
-          ) <| selectedPart selection data
+                    Just keyframe ->
+                        [ p [] [ text "Keyframe: ", text keyframe.name ] ]
+        )
+    <|
+        selectedPart selection data

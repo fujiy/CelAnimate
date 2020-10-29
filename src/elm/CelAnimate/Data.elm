@@ -64,6 +64,7 @@ type alias Tool =
     , v : Vec3
     }
 
+
 defaultParameters : Array ParameterDesc
 defaultParameters =
     Array.fromList
@@ -157,7 +158,8 @@ updateCel selection f =
                     Array.update selection.cel f part.cels
             }
     in
-    updatePart selection update 
+    updatePart selection update
+
 
 updateKeyframe : Path -> (Keyframe -> Keyframe) -> Data -> Data
 updateKeyframe selection f =

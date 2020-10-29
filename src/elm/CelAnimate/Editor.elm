@@ -61,7 +61,7 @@ update message model =
 
         ChangeParameters pv ->
             ( { model
-                | parameters = Dict.union  pv model.parameters
+                | parameters = Dict.union pv model.parameters
               }
             , Cmd.none
             )

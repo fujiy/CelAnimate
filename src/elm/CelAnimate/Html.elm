@@ -53,6 +53,11 @@ onSelected tagger =
     on "change" (Decode.map tagger targetSelected)
 
 
+targetValue : Decode.Decoder a -> Decode.Decoder a
+targetValue =
+    Decode.at [ "target", "value" ]
+
+
 targetSelected : Decode.Decoder Bool
 targetSelected =
     Decode.at [ "target", "selected" ] Decode.bool
