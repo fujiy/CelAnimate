@@ -115,3 +115,12 @@ lookAt v =
 maybe : (a -> Html msg) -> Maybe a -> Html msg
 maybe f =
     Maybe.unwrap (text "") f
+
+
+ifThen : Bool -> Html msg -> Html msg
+ifThen cond html =
+    if cond then
+        html
+
+    else
+        text ""

@@ -14,6 +14,7 @@ import CelAnimate.Editor.Tool as Tool
 import CelAnimate.Editor.Viewport as Viewport
 import CelAnimate.Html exposing (..)
 import CelAnimate.Mode.MeshEdit as MeshEdit
+import CelAnimate.Mode.Morph as Morph
 import Dict
 import File
 import File.Select as Select
@@ -28,7 +29,7 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( { viewportSize = { width = 800, height = 600 }
       , camera = initCameraState
-      , mode = MorphMode
+      , mode = Morph.initState
       , toolSettings = initToolSettings
       , cursor = initCursor
       , data = zeroData
@@ -73,30 +74,63 @@ update message model =
             ( { model | toolSettings = settings }, Cmd.none )
 
         ToolInput msg ->
-            let
-                mode =
-                    case model.mode of
-                        MeshEditMode state _ mesh ->
-                            let
-                                result =
-                                    MeshEdit.input model.toolSettings
-                                        state
-                                        msg
-                                        mesh
+            case model.mode of
+                MeshEditMode state _ mesh ->
+                    let
+                        result =
+                            MeshEdit.input model.toolSettings
+                                state
+                                msg
+                                mesh
 
-                                image =
-                                    Maybe.unwrap zeroImage .image <|
-                                        selectedCel model.selection model.data
-                            in
+                        image =
+                            Maybe.unwrap zeroImage .image <|
+                                selectedCel model.selection model.data
+                    in
+                    ( { model
+                        | mode =
                             MeshEditMode result.progress result.using <|
                                 Maybe.unwrap mesh (\f -> f image) result.commit
+                      }
+                    , Cmd.none
+                    )
 
-                        MorphMode ->
-                            MorphMode
-            in
-            ( { model | mode = mode }
-            , Cmd.none
-            )
+                MorphMode state _ ->
+                    case
+                        ( selectedCel model.selection model.data
+                        , selectedKeyCel model.selection model.data
+                        )
+                    of
+                        ( Just cel, Just keycel ) ->
+                            let
+                                result =
+                                    Morph.input model.toolSettings
+                                        msg
+                                        cel.mesh
+                                        state
+                                        keycel.morph
+
+                                upd kc =
+                                    case result.commit of
+                                        Just morph ->
+                                            { kc | morph = morph }
+
+                                        Nothing ->
+                                            kc
+                            in
+                            ( { model
+                                | mode =
+                                    MorphMode result.progress result.using
+                                , data =
+                                    updateKeyCel model.selection
+                                        upd
+                                        model.data
+                              }
+                            , Cmd.none
+                            )
+
+                        _ ->
+                            ( model, Cmd.none )
 
         Pointer pe event ->
             let

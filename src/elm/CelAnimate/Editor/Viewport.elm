@@ -7,6 +7,7 @@ import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
 import CelAnimate.Mode.MeshEdit as MeshEdit
+import CelAnimate.Mode.Morph as Morph
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
@@ -15,8 +16,10 @@ import Html exposing (Html, node, text)
 import Html.Attributes exposing (attribute, class, id, property, src)
 import Html.Events.Extra.Pointer as Pointer
 import Json.Encode as Encode
+import List.Extra as List
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Maybe.Extra as Maybe
+import Tuple
 
 
 type alias Scene msg =
@@ -52,8 +55,11 @@ modelScene model =
         , attribute "background" "#1A202C"
         ]
         [ case model.mode of
-            MorphMode ->
-                body model.selection model.parameters model.data.parts
+            MorphMode _ using ->
+                body using
+                    model.parameters
+                    model.selection
+                    model.data.parts
 
             MeshEditMode state using mesh ->
                 selectedCel model.selection model.data
@@ -65,7 +71,10 @@ toolScene : Model -> Scene msg
 toolScene model =
     node "three-scene"
         [ id "tool-scene" ]
-        [ toolView model.mode <| selectedCel model.selection model.data
+        [ toolView model.parameters
+            model.mode
+            (selectedCel model.selection model.data)
+            (selectedKeyframe model.selection model.data)
         , cursorObject model
         ]
 
@@ -96,60 +105,96 @@ imagePlane image =
         text ""
 
 
-toolView : ModeState -> Maybe Cel -> Three msg
-toolView mode mk =
+toolView :
+    ParameterVector
+    -> ModeState
+    -> Maybe Cel
+    -> Maybe Keyframe
+    -> Three msg
+toolView pv mode mcel mkeyframe =
     node "three-group"
         []
-        [ case mode of
-            MorphMode ->
-                text ""
+    <|
+        case mode of
+            MorphMode state using ->
+                [ maybe
+                    (\( cel, keyframe ) ->
+                        meshObject True False cel.image cel.mesh <|
+                            if using then
+                                Morph.progress state
+
+                            else
+                                Maybe.unwrap Array.empty .morph <|
+                                    List.find
+                                        (\keycel -> keycel.name == cel.name)
+                                        keyframe.cels
+                    )
+                  <|
+                    Maybe.map2 Tuple.pair mcel mkeyframe
+                , node "axes-helper" [ rotation <| rotationEuler pv ] []
+                ]
 
             MeshEditMode state using mesh ->
                 if using then
-                    maybe
+                    [ maybe
                         (\cel ->
-                            meshObject True cel.image <|
-                                MeshEdit.progress cel.image state
+                            meshObject True
+                                False
+                                cel.image
+                                (MeshEdit.progress cel.image state)
+                                Array.empty
                         )
-                        mk
+                        mcel
+                    ]
 
                 else
-                    maybe (\cel -> meshObject True cel.image mesh) mk
-        ]
+                    [ maybe
+                        (\cel ->
+                            meshObject True False cel.image mesh Array.empty
+                        )
+                        mcel
+                    ]
 
 
-body : Selection -> ParameterVector -> Array Part -> Three msg
-body selection pv parts =
-    let
-        pitch =
-            Dict.get "pitch" pv |> Maybe.unwrap 0 degrees
-
-        yaw =
-            Dict.get "yaw" pv |> Maybe.unwrap 0 degrees
-
-        roll =
-            Dict.get "roll" pv |> Maybe.unwrap 0 degrees
-    in
-    node "three-group"
-        [ rotation <| vec3 pitch yaw roll ]
-    <|
-        List.append
-            [ node "axes-helper" [] [] ]
-        <|
-            Array.mapToList (partObject selection) parts
+body : Bool -> ParameterVector -> Selection -> Array Part -> Three msg
+body tl pv selection parts =
+    node "three-group" [] <|
+        Array.mapToList (partObject tl pv selection) parts
 
 
-partObject : Selection -> Part -> Three msg
-partObject selection part =
-    maybe (\cel -> meshObject False cel.image cel.mesh)
-        (Array.get selection.cel part.cels)
+partObject : Bool -> ParameterVector -> Selection -> Part -> Three msg
+partObject tl pv selection part =
+    node "three-group" [] <|
+        Array.mapToList
+            (\keyframe ->
+                node "three-group" [] <|
+                    List.map
+                        (\keycel ->
+                            maybe
+                                (\cel ->
+                                    meshObject
+                                        False
+                                        tl
+                                        cel.image
+                                        cel.mesh
+                                        keycel.morph
+                                )
+                            <|
+                                Array.get 0 <|
+                                    Array.filter
+                                        (\cel -> cel.name == keycel.name)
+                                        part.cels
+                        )
+                        keyframe.cels
+            )
+            part.keyframes
 
 
-meshObject : Bool -> Image -> Mesh -> Three msg
-meshObject showMesh image mesh =
+meshObject : Bool -> Bool -> Image -> Mesh -> Morphing -> Three msg
+meshObject showMesh translucent image mesh morphing =
     let
         vertices =
-            Encode.array encodeVec3 mesh.vertices
+            Encode.array encodeVec3 <| addMorph morphing mesh.vertices
 
         faces =
             Encode.array encodeFace mesh.faces
@@ -186,7 +231,14 @@ meshObject showMesh image mesh =
                 []
             , if isLoaded image then
                 Html.node "material-mesh-basic"
-                    [ boolAttr "transparent" True ]
+                    [ boolAttr "transparent" True
+                    , floatAttr "opacity" <|
+                        if translucent then
+                            0.5
+
+                        else
+                            1.0
+                    ]
                     [ node "three-texture" [ src image.src ] [] ]
 
               else
@@ -214,6 +266,25 @@ camera state =
 
 cursorObject : Model -> Three msg
 cursorObject model =
+    let
+        radius =
+            case model.mode of
+                MorphMode state _ ->
+                    case state of
+                        MorphMove _ ->
+                            model.toolSettings.morphMove.radius
+
+                MeshEditMode state _ _ ->
+                    case state of
+                        PolygonMove _ ->
+                            model.toolSettings.polygonMove.radius
+
+                        PolygonDraw _ ->
+                            model.toolSettings.polygonDraw.radius
+
+                        PolygonErase _ ->
+                            model.toolSettings.polygonErase.radius
+    in
     node "three-line-segments"
         [ position <|
             cursorPosition model model.cursor.position
@@ -221,22 +292,8 @@ cursorObject model =
         [ node "geometry-edges"
             []
             [ node "geometry-circle"
-                [ floatAttr "radius" <|
-                    case model.mode of
-                        MorphMode ->
-                            0.01
-
-                        MeshEditMode state _ _ ->
-                            case state of
-                                PolygonMove _ ->
-                                    model.toolSettings.polygonMove.radius
-
-                                PolygonDraw _ ->
-                                    model.toolSettings.polygonDraw.radius
-
-                                PolygonErase _ ->
-                                    model.toolSettings.polygonErase.radius
-                , intAttr "segments" 16
+                [ floatAttr "radius" radius
+                , intAttr "segments" <| clamp 8 64 <| round <| radius * 20 + 10
                 ]
                 []
             ]

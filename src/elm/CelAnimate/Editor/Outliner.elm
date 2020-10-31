@@ -87,7 +87,14 @@ celView selection this cel =
         [ class "pl-4 my-px pointer-events-auto "
         , selectionColor <| matchCel selection this
         , selected <| matchCel selection this
-        , onSelected (\_ -> SelectData this)
+        , onSelected
+            (\_ ->
+                if selection.part == this.part then
+                    SelectData { this | keyframe = this.keyframe }
+
+                else
+                    SelectData this
+            )
         ]
         [ span
             [ class "px-1" ]

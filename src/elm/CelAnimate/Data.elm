@@ -5,6 +5,7 @@ import Array.Extra as Array
 import CelAnimate.Algebra exposing (..)
 import Dict exposing (Dict)
 import File exposing (File)
+import List.Extra as List
 import Math.Vector3 as Vec3 exposing (Vec3)
 import Maybe as Maybe
 import Maybe.Extra as Maybe
@@ -45,7 +46,14 @@ type alias Cel =
 type alias Keyframe =
     { name : String
     , vector : ParameterVector
-    , cels : List { name : String, morph : Morphing }
+    , cels : List KeyCel
+    }
+
+
+type alias KeyCel =
+    { name : String
+    , morph : Morphing
+    , weight : Float
     }
 
 
@@ -59,6 +67,7 @@ type alias Image =
 
 type alias Tool =
     { center : Vec3
+    , movement : Vec3
     , direction : Vec3
     , u : Vec3
     , v : Vec3
@@ -144,6 +153,16 @@ selectedKeyframe selection data =
         |> Maybe.andThen (.keyframes >> Array.get selection.keyframe)
 
 
+selectedKeyCel : Path -> Data -> Maybe KeyCel
+selectedKeyCel selection data =
+    Maybe.andThen2
+        (\keyframe cel ->
+            List.find (\keycel -> keycel.name == cel.name) keyframe.cels
+        )
+        (selectedKeyframe selection data)
+        (selectedCel selection data)
+
+
 updatePart : Path -> (Part -> Part) -> Data -> Data
 updatePart selection f data =
     { data | parts = Array.update selection.part f data.parts }
@@ -171,6 +190,23 @@ updateKeyframe selection f =
             }
     in
     updatePart selection update
+
+
+updateKeyCel : Path -> (KeyCel -> KeyCel) -> Data -> Data
+updateKeyCel selection f data =
+    let
+        celName =
+            selectedCel selection data |> Maybe.unwrap "" .name
+
+        update keyframe =
+            { keyframe
+                | cels =
+                    List.updateIf (\keycel -> keycel.name == celName)
+                        f
+                        keyframe.cels
+            }
+    in
+    updateKeyframe selection update data
 
 
 newPart : Path -> Data -> Data
@@ -234,7 +270,11 @@ newKeyframe pv cels at data =
                     (\part -> extractParameters part.parameters pv)
                     mpart
             , cels =
-                List.map (\cel -> { name = cel.name, morph = Array.empty }) cels
+                List.map
+                    (\cel ->
+                        KeyCel cel.name Array.empty 1
+                    )
+                    cels
             }
     in
     updatePart at
@@ -245,3 +285,13 @@ newKeyframe pv cels at data =
             }
         )
         data
+
+
+newKeyCel : Cel -> Keyframe -> Keyframe
+newKeyCel cel keyframe =
+    { keyframe | cels = KeyCel cel.name Array.empty 1 :: keyframe.cels }
+
+
+hasKeyCel : String -> Keyframe -> Bool
+hasKeyCel name keyframe =
+    List.any (\keycel -> keycel.name == name) <| keyframe.cels

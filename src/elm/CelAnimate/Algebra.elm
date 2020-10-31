@@ -1,12 +1,13 @@
 module CelAnimate.Algebra exposing (..)
 
 import Array exposing (Array)
+import Array.Extra as Array
 import Array.More as Array
 import Dict exposing (Dict)
 import Dict.Extra as Dict
 import Json.Encode as Encode
 import Math.Vector2 as Vec2 exposing (Vec2)
-import Math.Vector3 as Vec3 exposing (Vec3)
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Maybe.Extra as Maybe
 
 
@@ -45,32 +46,8 @@ type alias Mesh =
     }
 
 
-type alias Parameter =
-    { desc : ParameterDesc
-    , value : Float
-    }
 
-
-type alias ParameterVector =
-    Dict String Float
-
-
-type alias ParameterDesc =
-    { name : String
-    , kind : ParameterKind
-    }
-
-
-type ParameterKind
-    = Open
-    | Between { min : Float, max : Float }
-    | Cyclic { from : Float, to : Float }
-    | Enum Int
-
-
-emptyMesh : Mesh
-emptyMesh =
-    Mesh Array.empty Array.empty Array.empty
+-- Vectors ---------------------------------------------------------------------
 
 
 makeTriangle : Vec3 -> Vec3 -> Vec3 -> Vec3
@@ -141,6 +118,20 @@ encodeVec3 v =
     Encode.list Encode.float [ Vec3.getX v, Vec3.getY v, Vec3.getZ v ]
 
 
+
+-- Meshes ----------------------------------------------------------------------
+
+
+emptyMesh : Mesh
+emptyMesh =
+    Mesh Array.empty Array.empty Array.empty
+
+
+isEmptyMesh : Mesh -> Bool
+isEmptyMesh mesh =
+    Array.isEmpty mesh.vertices && Array.isEmpty mesh.faces
+
+
 encodeFace : Face -> Encode.Value
 encodeFace ( i, j, k ) =
     Encode.list Encode.int [ i, j, k ]
@@ -175,14 +166,38 @@ uvMap ( width, height ) ppm mesh =
     { mesh | mapping = Array.map map mesh.vertices }
 
 
-fromJust : Maybe a -> a
-fromJust m =
-    case m of
-        Just a ->
-            a
+addMorph : Morphing -> Vertices -> Vertices
+addMorph morph vertices =
+    Array.map2 Vec3.add vertices <|
+        Array.append morph <|
+            Array.repeat (Array.length vertices - Array.length morph) zero
 
-        Nothing ->
-            Debug.todo "Nothing"
+
+
+-- Parameters ------------------------------------------------------------------
+
+
+type alias Parameter =
+    { desc : ParameterDesc
+    , value : Float
+    }
+
+
+type alias ParameterVector =
+    Dict String Float
+
+
+type alias ParameterDesc =
+    { name : String
+    , kind : ParameterKind
+    }
+
+
+type ParameterKind
+    = Open
+    | Between { min : Float, max : Float }
+    | Cyclic { from : Float, to : Float }
+    | Enum Int
 
 
 minimumValue : ParameterDesc -> Float
@@ -285,6 +300,25 @@ parameterProjection names origin vector desc =
     sign * distance
 
 
+rotationEuler : ParameterVector -> Vec3
+rotationEuler pv =
+    let
+        pitch =
+            Dict.get "pitch" pv |> Maybe.unwrap 0 degrees
+
+        yaw =
+            Dict.get "yaw" pv |> Maybe.unwrap 0 degrees
+
+        roll =
+            Dict.get "roll" pv |> Maybe.unwrap 0 degrees
+    in
+    vec3 pitch yaw roll
+
+
+
+-- Utility Functions -----------------------------------------------------------
+
+
 signum : Float -> Float
 signum x =
     if x < 0 then
@@ -295,3 +329,13 @@ signum x =
 
     else
         1
+
+
+fromJust : Maybe a -> a
+fromJust m =
+    case m of
+        Just a ->
+            a
+
+        Nothing ->
+            Debug.todo "Nothing"

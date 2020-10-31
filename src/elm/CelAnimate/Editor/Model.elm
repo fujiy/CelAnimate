@@ -4,11 +4,13 @@ import Array
 import Array.Extra as Array
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
+import CelAnimate.Tool.MorphMove as MorphMove
 import CelAnimate.Tool.PolygonDraw as PolygonDraw
 import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
 import File exposing (File)
 import Html.Events.Extra.Pointer as Pointer
+import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Maybe.Extra as Maybe
 
@@ -74,9 +76,18 @@ type MeshEditToolState
     | PolygonMove PolygonMove.State
 
 
+type MorphToolState
+    = MorphMove MorphMove.State
+
+
 type ModeState
     = MeshEditMode MeshEditToolState Bool Mesh
-    | MorphMode
+    | MorphMode MorphToolState Bool
+
+
+initMorphTool : MorphToolState
+initMorphTool =
+    MorphMove MorphMove.initState
 
 
 initMeshEditTool : MeshEditToolState
@@ -86,7 +97,7 @@ initMeshEditTool =
 
 initModeState : ModeState
 initModeState =
-    MorphMode
+    MorphMode initMorphTool False
 
 
 type alias CameraState =
@@ -107,16 +118,18 @@ initCameraState =
 
 
 type alias Cursor =
-    { position : ( Float, Float )
-    , velocity : ( Float, Float )
+    { position : Vec2
+    , displace : Vec2
+    , velocity : Vec2
     , down : Bool
     }
 
 
 initCursor : Cursor
 initCursor =
-    { position = ( 0, 0 )
-    , velocity = ( 0, 0 )
+    { position = vec2 0 0
+    , displace = vec2 0 0
+    , velocity = vec2 0 0
     , down = False
     }
 
@@ -125,6 +138,7 @@ type alias ToolSettings =
     { polygonDraw : PolygonDraw.Settings
     , polygonErase : PolygonErase.Settings
     , polygonMove : PolygonMove.Settings
+    , morphMove : MorphMove.Settings
     }
 
 
@@ -133,6 +147,7 @@ initToolSettings =
     { polygonDraw = { radius = 0.2 }
     , polygonErase = { radius = 0.2 }
     , polygonMove = { radius = 0.2 }
+    , morphMove = { radius = 10 }
     }
 
 
@@ -151,8 +166,8 @@ viewSize camera distance =
     { width = width, height = height }
 
 
-cursorPosition : Model -> ( Float, Float ) -> Vec3
-cursorPosition model ( cx, cy ) =
+cursorPosition : Model -> Vec2 -> Vec3
+cursorPosition model pos =
     let
         size =
             viewSize model.camera (Vec3.length model.camera.position)
@@ -165,16 +180,16 @@ cursorPosition model ( cx, cy ) =
         -- ( cx, cy ) =
         --     cursor.position
         x =
-            (cx - w / 2) / w * size.width
+            (Vec2.getX pos - w / 2) / w * size.width
 
         y =
-            (h / 2 - cy) / h * size.height
+            (h / 2 - Vec2.getY pos) / h * size.height
     in
     Vec3.vec3 x y 0
 
 
-cursorVelocity : Model -> ( Float, Float ) -> Vec3
-cursorVelocity model ( vx, vy ) =
+cursorVelocity : Model -> Vec2 -> Vec3
+cursorVelocity model vec =
     let
         size =
             viewSize model.camera (Vec3.length model.camera.position)
@@ -184,11 +199,10 @@ cursorVelocity model ( vx, vy ) =
             , toFloat model.viewportSize.height
             )
 
-        -- ( cx, cy ) =
-        --     cursor.position
-        -- x =
-        --     vx / w * size.width
-        -- y =
-        --     (0 - vy) / h * size.height
+        x =
+            Vec2.getX vec / w * size.width
+
+        y =
+            (0 - Vec2.getY vec) / h * size.height
     in
-    Vec3.vec3 vx (0 - vy) 0
+    Vec3.vec3 x y 0

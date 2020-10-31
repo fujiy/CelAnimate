@@ -19,9 +19,10 @@ import Tuple
 
 view : ParameterVector -> Selection -> Data -> Html Msg
 view pv selection data =
-    div [ class "flex flex-col w-48 bg-gray-800 p-px" ]
+    div [ class "flex flex-col w-48 bg-gray-800 p-px overflow-y-scroll" ]
         [ maybe partProperties <| selectedPart selection data
-        , maybe (celProperties selection) <| selectedCel selection data
+        , maybe (celProperties selection <| selectedKeyframe selection data) <|
+            selectedCel selection data
         , keyframeProperties pv selection data
         ]
 
@@ -33,8 +34,8 @@ partProperties part =
         ]
 
 
-celProperties : Path -> Cel -> Html Msg
-celProperties path cel =
+celProperties : Path -> Maybe Keyframe -> Cel -> Html Msg
+celProperties path mkeyframe cel =
     div [ class "bg-gray-700 m-px p-2" ]
         [ p [] [ text "Cel: ", text cel.name ]
         , div [ class "bg-gray-700 m-px" ]
@@ -59,17 +60,32 @@ celProperties path cel =
             , text <| String.fromFloat <| Tuple.second cel.image.size
             , text "px"
             ]
-        , p []
-            [ button "Create Meshes" <|
-                Batch
-                    (ModifyData <|
-                        \selection ->
-                            updateCel selection MeshEdit.clearCel
-                    )
-                    (SwitchMode <|
-                        MeshEdit.start cel
-                    )
-            ]
+        , if isEmptyMesh cel.mesh then
+            p []
+                [ button "Create meshes" <|
+                    Batch
+                        (ModifyData <|
+                            \selection ->
+                                updateCel selection MeshEdit.clearCel
+                        )
+                        (SwitchMode <|
+                            MeshEdit.start cel
+                        )
+                ]
+
+          else
+            ifThen
+                (path.keyframe
+                    /= -1
+                    && not (Maybe.unwrap False (hasKeyCel cel.name) mkeyframe)
+                )
+            <|
+                p []
+                    [ button "Use in the keyframe" <|
+                        ModifyData <|
+                            \selection ->
+                                updateKeyframe selection <| newKeyCel cel
+                    ]
         ]
 
 
@@ -92,7 +108,8 @@ keyframeProperties pv selection data =
                                     )
                                     (SelectData
                                         { selection
-                                            | keyframe = Array.length part.keyframes
+                                            | keyframe =
+                                                Array.length part.keyframes
                                         }
                                     )
                             ]
@@ -100,7 +117,16 @@ keyframeProperties pv selection data =
                         ]
 
                     Just keyframe ->
-                        [ p [] [ text "Keyframe: ", text keyframe.name ] ]
+                        [ p [] [ text "Keyframe: ", text keyframe.name ]
+                        , div [] <| List.map keyCelProperties keyframe.cels
+                        ]
         )
     <|
         selectedPart selection data
+
+
+keyCelProperties : KeyCel -> Html Msg
+keyCelProperties keycel =
+    div [ class "m-1 border-gray-800 border-t" ]
+        [ p [] [ text keycel.name ]
+        ]
