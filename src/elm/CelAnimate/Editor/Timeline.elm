@@ -8,7 +8,7 @@ import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
 import DOM
 import Dict
-import Html exposing (Attribute, Html, div, input, label, node, span, text)
+import Html exposing (Attribute, Html, div, input, label, node, span, text, p)
 import Html.Attributes as Attr exposing (class, property, style, type_)
 import Html.Events as Events exposing (on, onClick)
 import Html.Events.Extra.Pointer as Pointer
@@ -78,7 +78,8 @@ view pv selection data =
                                     \keyframe ->
                                         { keyframe
                                             | vector =
-                                                Dict.insert desc.name value keyframe.vector
+                                                Dict.insert desc.name
+                                              value keyframe.vector
                                         }
                         )
 
@@ -129,16 +130,8 @@ parameter p using markers markerSelection =
     div [ class "p-px" ]
         [ div [ class "bg-gray-700 flex flex-row items-center" ]
             [ label [ class "w-24" ]
-                [ input
-                    [ type_ "checkbox"
-                    , class """form-checkbox text-teal-700 bg-gray-800
-                                border-gray-700 outline-none m-1"""
-                    , boolAttr "checked" using
-                    , property "checked" <| Encode.bool using
-                    , onCheck
-                        (\checked -> Use p.desc checked)
-                    ]
-                    []
+                [ checkbox using
+                |> Html.map (Use p.desc)
                 , span [] [ text p.desc.name ]
                 ]
             , slider using
@@ -162,11 +155,6 @@ parameter p using markers markerSelection =
             ]
         ]
 
-
-onCheck : (Bool -> msg) -> Attribute msg
-onCheck tagger =
-    Events.preventDefaultOn "input" <|
-        Decode.map (\checked -> ( tagger checked, True )) Events.targetChecked
 
 
 type SliderMsg
@@ -217,7 +205,7 @@ slider using min max value markers markerSelection =
                     Decode.map Move <|
                         targetValue Decode.float
                 ]
-                []
+                [ ]
     in
     div [ class "flex flex-grow flex-shrink " ]
         [ node "slider-track"

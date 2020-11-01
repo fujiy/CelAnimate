@@ -4,8 +4,9 @@ import CelAnimate.Algebra exposing (..)
 import DOM exposing (..)
 import Html exposing (Attribute, Html, i, input, span, text)
 import Html.Attributes exposing (attribute, class, property, type_, value)
-import Html.Events exposing (on, onClick, onInput)
+import Html.Events exposing (on, onClick, onInput, preventDefaultOn, targetChecked)
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Math.Vector3 as Vec3 exposing (Vec3)
 import Maybe.Extra as Maybe
 import Round
@@ -38,6 +39,17 @@ slider min max step round x =
         ]
         []
 
+checkbox : Bool -> Html Bool
+checkbox check =
+    input
+    [ type_ "checkbox"
+    , class """form-checkbox text-teal-700 bg-gray-800
+             border-gray-700 outline-none m-1"""
+    , boolAttr "checked" check
+    , property "checked" <| Encode.bool check
+    , onCheck identity
+    ]
+    []
 
 button : String -> msg -> Html msg
 button txt msg =
@@ -46,6 +58,12 @@ button txt msg =
         , onClick msg
         ]
         [ text txt ]
+
+onCheck : (Bool -> msg) -> Attribute msg
+onCheck tagger =
+    preventDefaultOn "input" <|
+        Decode.map (\checked -> ( tagger checked, True )) targetChecked
+
 
 
 onSelected : (Bool -> msg) -> Attribute msg

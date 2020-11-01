@@ -1,4 +1,4 @@
-module Interpolate exposing (Spline, emptySpline, interpolate, makeSpline)
+module Interpolate exposing (Spline, constant, interpolate, makeSpline)
 
 import Array
 import Array.Extra as Array
@@ -44,17 +44,17 @@ type Piece a
 
 -- Calculate splines -----------------------------------------------------------
 
+constant : Float -> Spline
+constant c =
+    Spline_ (buildPiece [ ( 0, Polynomial 0 0 0 c ) ]) 0 0
 
-emptySpline : Spline
-emptySpline =
-    Spline_ (buildPiece [ ( 0, Polynomial 0 0 0 0 ) ]) 0 0
 
 
 makeSpline : List ( Float, Float ) -> Spline
 makeSpline points =
     case points of
         [] ->
-            emptySpline
+            constant 0
 
         [ ( x, y ) ] ->
             Spline_ (buildPiece [ ( x, Polynomial 0 0 0 y ) ]) x x

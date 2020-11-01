@@ -185,7 +185,7 @@ cursorPosition model pos =
         y =
             (h / 2 - Vec2.getY pos) / h * size.height
     in
-    Vec3.vec3 x y 0
+    Vec3.vec3 x y 0.1
 
 
 cursorVelocity : Model -> Vec2 -> Vec3

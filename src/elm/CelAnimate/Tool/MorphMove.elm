@@ -49,7 +49,7 @@ step settings tool state =
         kdTree =
             KdTree.build verticeToArray <|
                 Array.indexedMap Tuple.pair <|
-                    addMorph state.morph state.vertices
+                    addMorph state.morph 0 state.vertices
 
         targets =
             KdTree.inRadius settings.radius ( 0, tool.center ) kdTree

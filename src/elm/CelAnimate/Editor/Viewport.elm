@@ -197,7 +197,8 @@ meshObject : Bool -> Bool -> Image -> Mesh -> KeyCel -> Three msg
 meshObject showMesh translucent image mesh key =
     let
         vertices =
-            Encode.array encodeVec3 <| addMorph key.morph mesh.vertices
+            Encode.array encodeVec3
+                <| addMorph key.morph key.z mesh.vertices
 
         faces =
             Encode.array encodeFace mesh.faces
@@ -239,8 +240,9 @@ meshObject showMesh translucent image mesh key =
                         if translucent then
                             0.5
 
-                        else
-                            1.0
+                        else if key.show then
+                            key.opacity
+                             else 0
                     ]
                     [ node "three-texture" [ src image.src ] [] ]
 

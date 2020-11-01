@@ -166,9 +166,9 @@ uvMap ( width, height ) ppm mesh =
     { mesh | mapping = Array.map map mesh.vertices }
 
 
-addMorph : Morphing -> Vertices -> Vertices
-addMorph morph vertices =
-    Array.map2 Vec3.add vertices <|
+addMorph : Morphing -> Float -> Vertices -> Vertices
+addMorph morph z vertices =
+    Array.map2 Vec3.add (Array.map (Vec3.add <| vec3 0 0 z) vertices) <|
         Array.append morph <|
             Array.repeat (Array.length vertices - Array.length morph) zero
 
@@ -339,3 +339,6 @@ fromJust m =
 
         Nothing ->
             Debug.todo "Nothing"
+
+flip : (a -> b -> c) -> b -> a -> c
+flip f b a = f a b

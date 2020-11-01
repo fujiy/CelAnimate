@@ -55,14 +55,16 @@ type alias Keyframe =
 type alias KeyCel =
     { name : String
     , morph : Morphing
-    , weight : Float
+    , opacity : Float
+    , show : Bool
     , z : Float
     }
 
 
 type alias Interpolation =
     { morph : Array ( Interpolate.Spline, Interpolate.Spline )
-    , weight : Interpolate.Spline
+    , opacity : Interpolate.Spline
+    , show : Interpolate.Spline
     , z : Interpolate.Spline
     }
 
@@ -122,7 +124,8 @@ zeroKeyCel : KeyCel
 zeroKeyCel =
     { name = ""
     , morph = Array.empty
-    , weight = 1
+    , opacity = 1
+    , show = True
     , z = 0
     }
 
@@ -130,8 +133,9 @@ zeroKeyCel =
 zeroInterpolate : Interpolation
 zeroInterpolate =
     { morph = Array.empty
-    , weight = Interpolate.emptySpline
-    , z = Interpolate.emptySpline
+    , opacity = Interpolate.constant 1
+    , show = Interpolate.constant 1
+    , z = Interpolate.constant 0
     }
 
 
@@ -326,6 +330,17 @@ newKeyframe pv cels at data =
         )
         data
 
+deleteKeyframe : Path -> Data -> Data
+deleteKeyframe at =
+    updatePart at
+        (\part ->
+            { part
+                | keyframes =
+                    Array.removeAt at.keyframe part.keyframes
+            }
+        )
+
+
 
 newKeyCel : ParameterVector -> Cel -> Keyframe -> Keyframe
 newKeyCel pv cel keyframe =
@@ -342,6 +357,14 @@ newKeyCel pv cel keyframe =
 hasKeyCel : String -> Keyframe -> Bool
 hasKeyCel name keyframe =
     List.any (\keycel -> keycel.name == name) <| keyframe.cels
+
+
+setPPM : Float -> Cel -> Cel
+setPPM ppm cel =
+    let image = cel.image
+    in {cel | image = {image | ppm = ppm}
+            , mesh = uvMap image.size ppm cel.mesh
+       }
 
 
 calcInterpolationOfSelectedPart : Selection -> Data -> Data
@@ -378,11 +401,18 @@ calcInterpolation names keyframes cel =
                                 (Tuple.pair (chooseParam keyframe.vector))
                     )
 
-        weight =
+        opacity =
             keys
                 |> List.map
-                    (\( t, keycel ) -> ( t, keycel.weight ))
+                    (\( t, keycel ) -> ( t, keycel.opacity ))
                 |> Interpolate.makeSpline
+
+        show =
+            keys
+                |> List.map
+                    (\( t, keycel ) -> ( t, if keycel.show then 1 else 0 ))
+                |> Interpolate.makeSpline
+
 
         z =
             keys
@@ -416,7 +446,7 @@ calcInterpolation names keyframes cel =
                     )
                 |> Array.fromList
     in
-    { cel | interpolation = Interpolation morph weight z }
+    { cel | interpolation = Interpolation morph opacity show z }
 
 
 interpolate : Interpolation -> ParameterVector -> KeyCel
@@ -434,6 +464,7 @@ interpolate ip pv =
                     0
             )
             ip.morph
-    , weight = Interpolate.interpolate ip.weight t
+    , opacity = Interpolate.interpolate ip.opacity t
+    , show = if Interpolate.interpolate ip.show t < 1 then False else True
     , z = Interpolate.interpolate ip.z t
     }

@@ -9,11 +9,13 @@ import CelAnimate.Html exposing (..)
 import CelAnimate.Mode.MeshEdit as MeshEdit
 import Dict
 import File
-import Html exposing (Html, div, img, p, span, text)
-import Html.Attributes as Attr exposing (class, disabled, src)
-import Html.Events as Events exposing (onClick)
+import Html exposing (Html, div, img, p, span, text, input, label, node)
+import Html.Attributes as Attr exposing (class, disabled, src, type_, value)
+import Html.Events as Events exposing (onClick, onInput)
+import Json.Decode as Decode
 import Maybe
 import Maybe.Extra as Maybe
+import Round
 import Tuple
 
 
@@ -65,6 +67,20 @@ celProperties pv path mkeyframe cel =
             , text "px × "
             , text <| String.fromFloat <| Tuple.second cel.image.size
             , text "px"
+            ]
+        , p [class "my-1"]
+            [ input
+                  [type_ "number"
+                  , class "w-16 bg-gray-800 outline-none"
+                  , value <| String.fromFloat cel.image.ppm
+                  , onInput <| \val ->
+                      ModifyData <| \sel ->
+                          case String.toFloat val of
+                              Just ppm -> 
+                                  updateCel sel <| setPPM ppm
+                              Nothing -> identity
+                  ] []
+            , text " pixel per meter"
             ]
         , if isEmptyMesh cel.mesh then
             p []
@@ -125,6 +141,15 @@ keyframeProperties pv selection data =
                     Just keyframe ->
                         [ p [] [ text "Keyframe: ", text keyframe.name ]
                         , div [] <| List.map keyCelProperties keyframe.cels
+                        , node "context-menu"
+                            [ class "bg-gray-700 shadow-xl w-32 "
+                            ]
+                              [ p
+                                [ class "hover:bg-gray-800 p-1"
+                                , onClick <| ModifyData deleteKeyframe
+                                ]
+                                [ text "Delete Keyframe" ]
+                              ]
                         ]
         )
     <|
@@ -135,4 +160,32 @@ keyCelProperties : KeyCel -> Html Msg
 keyCelProperties keycel =
     div [ class "m-1 border-gray-800 border-t" ]
         [ p [] [ text keycel.name ]
+        , p []
+            [ label []
+                  [ text "show"
+                  , checkbox keycel.show
+                  |> Html.map
+                       (\check ->
+                            ModifyData <|
+                            flip updateKeyCel (\k -> { k | show = check}))
+                  ]
+            ]
+        , p []
+            [ text "opacity: "
+            , text <| Round.round 2 keycel.opacity
+            , slider 0 1 0.01 2 keycel.opacity
+                |> Html.map
+                   (\v ->
+                        ModifyData <|
+                        flip updateKeyCel (\k -> { k | opacity = v}))
+            ]
+         , p []
+            [ text "z: "
+            , text <| Round.round 3 keycel.z
+            , slider -0.1 0.1 0.001 3 keycel.z
+            |> Html.map
+                   (\v ->
+                        ModifyData <|
+                        flip updateKeyCel (\k -> { k | z = v}))
+            ]
         ]
