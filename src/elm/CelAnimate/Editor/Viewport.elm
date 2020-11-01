@@ -56,9 +56,9 @@ modelScene model =
         ]
         [ case model.mode of
             MorphMode _ using ->
-                body using
+                body
                     model.parameters
-                    model.selection
+                    (selectedKeyframe model.selection model.data)
                     model.data.parts
 
             MeshEditMode state using mesh ->
@@ -75,6 +75,7 @@ toolScene model =
             model.mode
             (selectedCel model.selection model.data)
             (selectedKeyframe model.selection model.data)
+            (selectedKeyCel model.selection model.data)
         , cursorObject model
         ]
 
@@ -110,27 +111,27 @@ toolView :
     -> ModeState
     -> Maybe Cel
     -> Maybe Keyframe
+    -> Maybe KeyCel
     -> Three msg
-toolView pv mode mcel mkeyframe =
+toolView pv mode mcel mkeyframe mkeycel =
     node "three-group"
         []
     <|
         case mode of
             MorphMode state using ->
-                [ maybe
-                    (\( cel, keyframe ) ->
-                        meshObject True False cel.image cel.mesh <|
-                            if using then
-                                Morph.progress state
+                [ maybe_ <|
+                    Maybe.map3
+                        (\cel keyframe keycel ->
+                            meshObject True False cel.image cel.mesh <|
+                                if using then
+                                    { keycel | morph = Morph.progress state }
 
-                            else
-                                Maybe.unwrap Array.empty .morph <|
-                                    List.find
-                                        (\keycel -> keycel.name == cel.name)
-                                        keyframe.cels
-                    )
-                  <|
-                    Maybe.map2 Tuple.pair mcel mkeyframe
+                                else
+                                    keycel
+                        )
+                        mcel
+                        mkeyframe
+                        mkeycel
                 , node "axes-helper" [ rotation <| rotationEuler pv ] []
                 ]
 
@@ -142,7 +143,7 @@ toolView pv mode mcel mkeyframe =
                                 False
                                 cel.image
                                 (MeshEdit.progress cel.image state)
-                                Array.empty
+                                zeroKeyCel
                         )
                         mcel
                     ]
@@ -150,51 +151,53 @@ toolView pv mode mcel mkeyframe =
                 else
                     [ maybe
                         (\cel ->
-                            meshObject True False cel.image mesh Array.empty
+                            meshObject True False cel.image mesh zeroKeyCel
                         )
                         mcel
                     ]
 
 
-body : Bool -> ParameterVector -> Selection -> Array Part -> Three msg
-body tl pv selection parts =
+body : ParameterVector -> Maybe Keyframe -> Array Part -> Three msg
+body pv mkeyframe parts =
     node "three-group" [] <|
-        Array.mapToList (partObject tl pv selection) parts
+        Array.mapToList (partObject pv mkeyframe) parts
 
 
-partObject : Bool -> ParameterVector -> Selection -> Part -> Three msg
-partObject tl pv selection part =
+partObject : ParameterVector -> Maybe Keyframe -> Part -> Three msg
+partObject pv mkeyframe part =
     node "three-group" [] <|
-        Array.mapToList
-            (\keyframe ->
-                node "three-group" [] <|
-                    List.map
-                        (\keycel ->
-                            maybe
-                                (\cel ->
-                                    meshObject
-                                        False
-                                        tl
-                                        cel.image
-                                        cel.mesh
-                                        keycel.morph
-                                )
-                            <|
-                                Array.get 0 <|
-                                    Array.filter
-                                        (\cel -> cel.name == keycel.name)
-                                        part.cels
-                        )
-                        keyframe.cels
-            )
-            part.keyframes
+        case mkeyframe of
+            Just keyframe ->
+                List.map
+                    (\keycel ->
+                        maybe
+                            (\cel ->
+                                meshObject
+                                    False
+                                    True
+                                    cel.image
+                                    cel.mesh
+                                    keycel
+                            )
+                        <|
+                            celByName keycel.name part
+                    )
+                    keyframe.cels
+
+            Nothing ->
+                Array.mapToList
+                    (\cel ->
+                        meshObject False False cel.image cel.mesh <|
+                            interpolate cel.interpolation pv
+                    )
+                    part.cels
 
 
-meshObject : Bool -> Bool -> Image -> Mesh -> Morphing -> Three msg
-meshObject showMesh translucent image mesh morphing =
+meshObject : Bool -> Bool -> Image -> Mesh -> KeyCel -> Three msg
+meshObject showMesh translucent image mesh key =
     let
         vertices =
-            Encode.array encodeVec3 <| addMorph morphing mesh.vertices
+            Encode.array encodeVec3 <| addMorph key.morph mesh.vertices
 
         faces =
             Encode.array encodeFace mesh.faces

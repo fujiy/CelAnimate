@@ -117,6 +117,11 @@ maybe f =
     Maybe.unwrap (text "") f
 
 
+maybe_ : Maybe (Html msg) -> Html msg
+maybe_ =
+    Maybe.withDefault <| text ""
+
+
 ifThen : Bool -> Html msg -> Html msg
 ifThen cond html =
     if cond then

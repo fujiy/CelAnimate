@@ -20,6 +20,7 @@ import File
 import File.Select as Select
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, style)
+import Interpolate
 import Maybe.Extra as Maybe
 import Platform.Cmd
 import Task

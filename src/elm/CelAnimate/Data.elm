@@ -5,8 +5,9 @@ import Array.Extra as Array
 import CelAnimate.Algebra exposing (..)
 import Dict exposing (Dict)
 import File exposing (File)
+import Interpolate
 import List.Extra as List
-import Math.Vector3 as Vec3 exposing (Vec3)
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Maybe as Maybe
 import Maybe.Extra as Maybe
 
@@ -40,6 +41,7 @@ type alias Cel =
     { name : String
     , image : Image
     , mesh : Mesh
+    , interpolation : Interpolation
     }
 
 
@@ -54,6 +56,14 @@ type alias KeyCel =
     { name : String
     , morph : Morphing
     , weight : Float
+    , z : Float
+    }
+
+
+type alias Interpolation =
+    { morph : Array ( Interpolate.Spline, Interpolate.Spline )
+    , weight : Interpolate.Spline
+    , z : Interpolate.Spline
     }
 
 
@@ -104,6 +114,24 @@ zeroCel =
     { name = "cel0"
     , image = zeroImage
     , mesh = emptyMesh
+    , interpolation = zeroInterpolate
+    }
+
+
+zeroKeyCel : KeyCel
+zeroKeyCel =
+    { name = ""
+    , morph = Array.empty
+    , weight = 1
+    , z = 0
+    }
+
+
+zeroInterpolate : Interpolation
+zeroInterpolate =
+    { morph = Array.empty
+    , weight = Interpolate.emptySpline
+    , z = Interpolate.emptySpline
     }
 
 
@@ -161,6 +189,14 @@ selectedKeyCel selection data =
         )
         (selectedKeyframe selection data)
         (selectedCel selection data)
+
+
+celByName : String -> Part -> Maybe Cel
+celByName name part =
+    Array.get 0 <|
+        Array.filter
+            (\cel -> cel.name == name)
+            part.cels
 
 
 updatePart : Path -> (Part -> Part) -> Data -> Data
@@ -272,7 +308,11 @@ newKeyframe pv cels at data =
             , cels =
                 List.map
                     (\cel ->
-                        KeyCel cel.name Array.empty 1
+                        let
+                            keycel =
+                                interpolate cel.interpolation pv
+                        in
+                        { keycel | name = cel.name }
                     )
                     cels
             }
@@ -287,11 +327,113 @@ newKeyframe pv cels at data =
         data
 
 
-newKeyCel : Cel -> Keyframe -> Keyframe
-newKeyCel cel keyframe =
-    { keyframe | cels = KeyCel cel.name Array.empty 1 :: keyframe.cels }
+newKeyCel : ParameterVector -> Cel -> Keyframe -> Keyframe
+newKeyCel pv cel keyframe =
+    { keyframe
+        | cels =
+            let
+                keycel =
+                    interpolate cel.interpolation pv
+            in
+            { keycel | name = cel.name } :: keyframe.cels
+    }
 
 
 hasKeyCel : String -> Keyframe -> Bool
 hasKeyCel name keyframe =
     List.any (\keycel -> keycel.name == name) <| keyframe.cels
+
+
+calcInterpolationOfSelectedPart : Selection -> Data -> Data
+calcInterpolationOfSelectedPart selection data =
+    updateCel selection
+        (\cel ->
+            case selectedPart selection data of
+                Just part ->
+                    calcInterpolation part.parameters part.keyframes cel
+
+                Nothing ->
+                    cel
+        )
+        data
+
+
+calcInterpolation : Dict String ParameterDesc -> Array Keyframe -> Cel -> Cel
+calcInterpolation names keyframes cel =
+    let
+        chooseParam pv =
+            extractParameters names pv
+                |> Dict.values
+                |> List.head
+                |> Maybe.withDefault 0
+
+        keys : List ( Float, KeyCel )
+        keys =
+            Array.toList keyframes
+                |> List.filterMap
+                    (\keyframe ->
+                        List.find (\keycel -> keycel.name == cel.name)
+                            keyframe.cels
+                            |> Maybe.map
+                                (Tuple.pair (chooseParam keyframe.vector))
+                    )
+
+        weight =
+            keys
+                |> List.map
+                    (\( t, keycel ) -> ( t, keycel.weight ))
+                |> Interpolate.makeSpline
+
+        z =
+            keys
+                |> List.map
+                    (\( t, keycel ) -> ( t, keycel.z ))
+                |> Interpolate.makeSpline
+
+        morph =
+            keys
+                |> List.map
+                    (\( t, keycel ) ->
+                        Array.resizerRepeat
+                            (Array.length cel.mesh.vertices)
+                            zero
+                            keycel.morph
+                            |> Array.mapToList
+                                (\v ->
+                                    ( ( t, Vec3.getX v ), ( t, Vec3.getY v ) )
+                                )
+                    )
+                |> List.transpose
+                |> List.map
+                    (\vs ->
+                        let
+                            ( xs, ys ) =
+                                List.unzip vs
+                        in
+                        ( Interpolate.makeSpline xs
+                        , Interpolate.makeSpline ys
+                        )
+                    )
+                |> Array.fromList
+    in
+    { cel | interpolation = Interpolation morph weight z }
+
+
+interpolate : Interpolation -> ParameterVector -> KeyCel
+interpolate ip pv =
+    let
+        t =
+            Dict.values pv |> List.head |> Maybe.withDefault 0
+    in
+    { name = ""
+    , morph =
+        Array.map
+            (\( xsp, ysp ) ->
+                vec3 (Interpolate.interpolate xsp t)
+                    (Interpolate.interpolate ysp t)
+                    0
+            )
+            ip.morph
+    , weight = Interpolate.interpolate ip.weight t
+    , z = Interpolate.interpolate ip.z t
+    }

@@ -21,7 +21,9 @@ view : ParameterVector -> Selection -> Data -> Html Msg
 view pv selection data =
     div [ class "flex flex-col w-48 bg-gray-800 p-px overflow-y-scroll" ]
         [ maybe partProperties <| selectedPart selection data
-        , maybe (celProperties selection <| selectedKeyframe selection data) <|
+        , maybe
+            (celProperties pv selection <| selectedKeyframe selection data)
+          <|
             selectedCel selection data
         , keyframeProperties pv selection data
         ]
@@ -31,11 +33,15 @@ partProperties : Part -> Html Msg
 partProperties part =
     div [ class "bg-gray-700 m-px p-2" ]
         [ p [] [ text "Part: ", text part.name ]
+        , p []
+            [ button "Calcurate interpolation" <|
+                ModifyData calcInterpolationOfSelectedPart
+            ]
         ]
 
 
-celProperties : Path -> Maybe Keyframe -> Cel -> Html Msg
-celProperties path mkeyframe cel =
+celProperties : ParameterVector -> Path -> Maybe Keyframe -> Cel -> Html Msg
+celProperties pv path mkeyframe cel =
     div [ class "bg-gray-700 m-px p-2" ]
         [ p [] [ text "Cel: ", text cel.name ]
         , div [ class "bg-gray-700 m-px" ]
@@ -84,7 +90,7 @@ celProperties path mkeyframe cel =
                     [ button "Use in the keyframe" <|
                         ModifyData <|
                             \selection ->
-                                updateKeyframe selection <| newKeyCel cel
+                                updateKeyframe selection <| newKeyCel pv cel
                     ]
         ]
 
