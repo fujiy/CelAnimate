@@ -23,11 +23,14 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.1",
     "font-awesome-webpack": "0.0.5-beta.2",
+    "fs": "0.0.1-security",
     "material-design-icons": "^3.0.1",
     "material-design-icons-iconfont": "^6.1.0",
+    "node-zip": "^1.1.1",
     "stats-js": "^1.0.1",
     "tailwindcss": "^1.9.2",
     "three": "^0.121.1",
+    "unzipper": "^0.10.11",
     "webpack": "^4.44.2"
   },
   "devDependencies": {

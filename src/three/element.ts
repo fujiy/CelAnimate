@@ -68,7 +68,17 @@ export class ThreeObject extends ThreeElement {
         this.object3d = null;
     }
     static get observedAttributes(): string[] {
-        return [];
+        return ['render-order'];
+    }
+
+    attributeChangedCallback(name: string, oldValue: any, value: any) {
+        super.attributeChangedCallback(name, oldValue, value)
+        if (!this.object3d) return
+        switch (name) {
+            case 'render-order':
+                this.object3d.renderOrder = +value
+                break
+        }
     }
     disconnectedCallback() {
         if (!this.parentElement) {
@@ -91,6 +101,8 @@ export class ThreeObject extends ThreeElement {
         this.position = this.position_
         this.rotation = this.rotation_
         this.lookAt = this.lookAt_
+
+        this.object3d.renderOrder = this.numAttr("render-order")
     }
     add(object: ThreeObject) {
         this.object3d.add(object.object3d)

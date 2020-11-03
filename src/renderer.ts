@@ -10,6 +10,7 @@ import './three'
 import './components/treeview'
 import './components/contextmenu'
 import './components/slidertrack'
+import './components/file'
 import './style/main.sass'
 
 

@@ -35,6 +35,7 @@ app.on('ready', function() {
         width: 800, height: 600,
         webPreferences: {
             nodeIntegration: true,
+            enableRemoteModule: true,
             // webSecurity: false,
             // allowRunningInsecureContent: true,
             // experimentalFeatures: true,

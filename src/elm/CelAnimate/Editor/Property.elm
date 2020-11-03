@@ -50,14 +50,14 @@ celProperties pv path mkeyframe cel =
             [ icon_ "image"
             , Html.button
                 [ class "bg-gray-800 hover:bg-gray-900"
-                , onClick <| FileAction FileSelect
+                , onClick <| FileAction ImageSelect
                 ]
-                [ text <| imageName cel.image
+                [ text cel.image.name
                 , icon_ "folder-open"
                 ]
             ]
         , img
-            [ src <| cel.image.src
+            [ src <| cel.image.uri
             , Attr.map (FileAction << GotImageSize path) <|
                 Events.on "load" targetImgSize
             ]

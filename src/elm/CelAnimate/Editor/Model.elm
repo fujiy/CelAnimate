@@ -2,6 +2,7 @@ module CelAnimate.Editor.Model exposing (..)
 
 import Array
 import Array.Extra as Array
+import Bytes exposing (Bytes)
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
 import CelAnimate.Tool.MorphMove as MorphMove
@@ -10,6 +11,7 @@ import CelAnimate.Tool.PolygonErase as PolygonErase
 import CelAnimate.Tool.PolygonMove as PolygonMove
 import File exposing (File)
 import Html.Events.Extra.Pointer as Pointer
+import Json.Encode exposing (Value)
 import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Maybe.Extra as Maybe
@@ -49,9 +51,16 @@ type ToolEvent
 
 
 type FileMsg
-    = FileSelect
-    | FileSelected File
-    | FileLoaded File String
+    =
+     --  DataSelect
+    -- | DataSelected File
+    -- | DataLoaded File Bytes
+    -- | DataSave
+    -- | DataWrite Bytes
+     DataLoad Value
+    | ImageSelect
+    | ImageSelected Path File
+    | ImageLoaded Path String String
     | GotImageSize Path ( Float, Float )
 
 
@@ -110,7 +119,7 @@ type alias CameraState =
 
 initCameraState : CameraState
 initCameraState =
-    { position = vec3 0 0 4
+    { position = vec3 0 0 3
     , lookAt = vec3 0 0 0
     , fov = 50
     , aspect = 1

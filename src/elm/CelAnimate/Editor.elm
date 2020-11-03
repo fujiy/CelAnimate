@@ -6,6 +6,8 @@ import Array.More as Array
 import Browser.Dom exposing (getViewport)
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
+import CelAnimate.Data.Decode as Decode
+import CelAnimate.Data.Encode as Encode
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Editor.Outliner as Outliner
 import CelAnimate.Editor.Property as PropertyEditor
@@ -17,10 +19,12 @@ import CelAnimate.Mode.MeshEdit as MeshEdit
 import CelAnimate.Mode.Morph as Morph
 import Dict
 import File
+import File.Download as Download
 import File.Select as Select
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, style)
 import Interpolate
+import Json.Decode as Decode
 import Maybe.Extra as Maybe
 import Platform.Cmd
 import Task
@@ -156,33 +160,99 @@ update message model =
 
         FileAction msg ->
             case msg of
-                FileSelect ->
-                    let
-                        load file =
-                            file
-                    in
+
+                DataLoad value ->
+                    case Decode.decode value of
+                        Just (data, images) ->
+                            ( {model | data = data}
+                            , Cmd.batch
+                                <| List.map
+                                    (\(path, name, uri) ->
+                                         Task.perform
+                                         (\_ -> FileAction
+                                              <| ImageLoaded path name uri)
+                                         <| Task.succeed ()
+                                    )
+                                    images
+                            )
+                        Nothing ->
+                            ( model, Cmd.none)
+                -- DataSelect ->
+                --     ( model
+                --     , Select.file [ ] <|
+                --         FileAction
+                --             << DataSelected
+                --     )
+
+                -- DataSelected file ->
+                --     ( model
+                --     , File.toBytes file
+                --         |> Task.perform (FileAction << DataLoaded file)
+                --     )
+
+                -- DataLoaded file bytes ->
+                --     case Decode.decode bytes of
+                --         Just (d, images) ->
+                --             let
+                --                 data =
+                --                     { d | name = File.name file }
+                --             in
+                --             ({ model | data = data }
+                --             , Cmd.batch <|
+                --                 List.map
+                --                     (\(pathName, image) ->
+                --                          Task.perform
+                --                          (\_ ->
+                --                               FileAction <|
+                --                               ImageSelected
+                --                               (parsePath data pathName) image
+                --                          )
+                --                          <| Task.succeed ()
+                --                     )
+                --                     images
+                --             )
+
+                --         Nothing ->
+                --             (model , Cmd.none)
+
+                -- DataSave ->
+                --     ( model
+                --     , Encode.encode model.data
+                --         |> Task.perform (FileAction << DataWrite)
+                --     )
+
+                -- DataWrite bytes ->
+                --     ( model
+                --     , Download.bytes model.data.name
+                --         "application/octet-stream"
+                --         bytes
+                --     )
+
+                ImageSelect ->
                     ( model
-                    , Cmd.map (FileAction << FileSelected) <|
-                        Select.file [ "image/jpeg image/png" ] load
+                    , Select.file [ "image/jpeg image/png" ] <|
+                        FileAction
+                            << ImageSelected model.selection
                     )
 
-                FileSelected file ->
+                ImageSelected path file ->
                     ( model
                     , File.toUrl file
-                        |> Task.perform (FileLoaded file >> FileAction)
+                    |> Task.perform
+                          (FileAction << ImageLoaded path (File.name file) )
                     )
 
-                FileLoaded file url ->
+                ImageLoaded path name uri ->
                     let
                         updateImage image =
                             { image
-                                | file = Just file
-                                , src = url
+                                | name = name
+                                , uri = uri
                             }
                     in
                     ( { model
                         | data =
-                            updateCel model.selection
+                            updateCel path
                                 (\keyframe ->
                                     { keyframe
                                         | image = updateImage keyframe.image

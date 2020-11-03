@@ -10,6 +10,7 @@ import List.Extra as List
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Maybe as Maybe
 import Maybe.Extra as Maybe
+import Parser as Parser exposing (Parser, (|.), (|=))
 
 
 type alias Path =
@@ -70,8 +71,8 @@ type alias Interpolation =
 
 
 type alias Image =
-    { file : Maybe File
-    , src : String
+    { name : String
+    , uri : String
     , size : ( Float, Float )
     , ppm : Float
     }
@@ -93,6 +94,14 @@ defaultParameters =
         , ParameterDesc "pitch" <| Between { min = -90, max = 90 }
         , ParameterDesc "roll" <| Cyclic { from = -180, to = 180 }
         ]
+
+
+nullPath : Path
+nullPath =
+    { part = -1
+    , cel = -1
+    , keyframe = -1
+    }
 
 
 zeroData : Data
@@ -141,21 +150,15 @@ zeroInterpolate =
 
 zeroImage : Image
 zeroImage =
-    { file = Nothing
-    , src = ""
+    { name = ""
+    , uri = ""
     , size = ( 0, 0 )
     , ppm = 500
     }
 
 
-imageName : Image -> String
-imageName image =
-    Maybe.unwrap "" File.name image.file
-
-
 isLoaded : Image -> Bool
-isLoaded image =
-    Maybe.isJust image.file
+isLoaded image = image.uri /= ""
 
 
 matchPart : Path -> Path -> Bool
@@ -166,6 +169,10 @@ matchPart a b =
 matchCel : Path -> Path -> Bool
 matchCel a b =
     a.part == b.part && a.cel == b.cel
+
+
+
+-- Get -------------------------------------------------------------------------
 
 
 selectedPart : Path -> Data -> Maybe Part
@@ -201,6 +208,15 @@ celByName name part =
         Array.filter
             (\cel -> cel.name == name)
             part.cels
+
+
+hasKeyCel : String -> Keyframe -> Bool
+hasKeyCel name keyframe =
+    List.any (\keycel -> keycel.name == name) <| keyframe.cels
+
+
+
+-- Update ----------------------------------------------------------------------
 
 
 updatePart : Path -> (Part -> Part) -> Data -> Data
@@ -249,6 +265,22 @@ updateKeyCel selection f data =
     updateKeyframe selection update data
 
 
+setPPM : Float -> Cel -> Cel
+setPPM ppm cel =
+    let
+        image =
+            cel.image
+    in
+    { cel
+        | image = { image | ppm = ppm }
+        , mesh = uvMap image.size ppm cel.mesh
+    }
+
+
+
+-- New -------------------------------------------------------------------------
+
+
 newPart : Path -> Data -> Data
 newPart _ data =
     let
@@ -258,11 +290,6 @@ newPart _ data =
             }
     in
     { data | parts = Array.push part data.parts }
-
-
-deletePart : Path -> Data -> Data
-deletePart at data =
-    { data | parts = Array.removeAt at.part data.parts }
 
 
 newCel : Path -> Data -> Data
@@ -281,17 +308,6 @@ newCel at data =
     updatePart at
         (\p -> { p | cels = Array.push cel p.cels })
         data
-
-
-deleteCel : Path -> Data -> Data
-deleteCel at =
-    updatePart at
-        (\part ->
-            { part
-                | cels =
-                    Array.removeAt at.cel part.cels
-            }
-        )
 
 
 newKeyframe : ParameterVector -> List Cel -> Path -> Data -> Data
@@ -330,17 +346,6 @@ newKeyframe pv cels at data =
         )
         data
 
-deleteKeyframe : Path -> Data -> Data
-deleteKeyframe at =
-    updatePart at
-        (\part ->
-            { part
-                | keyframes =
-                    Array.removeAt at.keyframe part.keyframes
-            }
-        )
-
-
 
 newKeyCel : ParameterVector -> Cel -> Keyframe -> Keyframe
 newKeyCel pv cel keyframe =
@@ -354,17 +359,39 @@ newKeyCel pv cel keyframe =
     }
 
 
-hasKeyCel : String -> Keyframe -> Bool
-hasKeyCel name keyframe =
-    List.any (\keycel -> keycel.name == name) <| keyframe.cels
+
+-- Delete ----------------------------------------------------------------------
 
 
-setPPM : Float -> Cel -> Cel
-setPPM ppm cel =
-    let image = cel.image
-    in {cel | image = {image | ppm = ppm}
-            , mesh = uvMap image.size ppm cel.mesh
-       }
+deletePart : Path -> Data -> Data
+deletePart at data =
+    { data | parts = Array.removeAt at.part data.parts }
+
+
+deleteCel : Path -> Data -> Data
+deleteCel at =
+    updatePart at
+        (\part ->
+            { part
+                | cels =
+                    Array.removeAt at.cel part.cels
+            }
+        )
+
+
+deleteKeyframe : Path -> Data -> Data
+deleteKeyframe at =
+    updatePart at
+        (\part ->
+            { part
+                | keyframes =
+                    Array.removeAt at.keyframe part.keyframes
+            }
+        )
+
+
+
+-- Interpolation ---------------------------------------------------------------
 
 
 calcInterpolationOfSelectedPart : Selection -> Data -> Data
@@ -410,9 +437,16 @@ calcInterpolation names keyframes cel =
         show =
             keys
                 |> List.map
-                    (\( t, keycel ) -> ( t, if keycel.show then 1 else 0 ))
-                |> Interpolate.makeSpline
+                    (\( t, keycel ) ->
+                        ( t
+                        , if keycel.show then
+                            1
 
+                          else
+                            0
+                        )
+                    )
+                |> Interpolate.makeSpline
 
         z =
             keys
@@ -465,6 +499,73 @@ interpolate ip pv =
             )
             ip.morph
     , opacity = Interpolate.interpolate ip.opacity t
-    , show = if Interpolate.interpolate ip.show t < 1 then False else True
+    , show =
+        if Interpolate.interpolate ip.show t < 0.8 then
+            False
+
+        else
+            True
     , z = Interpolate.interpolate ip.z t
     }
+
+
+
+-- Path ------------------------------------------------------------------------
+
+parsePath : Data -> String -> Path
+parsePath d =
+    Parser.run (partPathParser d)
+        >> Result.mapError (Debug.log "parse error")
+        >> Result.withDefault nullPath
+
+partPathParser : Data -> Parser Path
+partPathParser data =
+    Parser.oneOf <|
+        Array.indexedMapToList
+            (\i part ->
+                 Parser.succeed (\path -> { path | part = i })
+                 |. Parser.backtrackable (Parser.keyword part.name)
+                 |= Parser.oneOf
+                 [ Parser.succeed identity
+                    |. Parser.symbol "/"
+                    |= Parser.oneOf
+                       [ celPathParser part
+                       , keyframePathParser part
+                       , Parser.succeed nullPath |. Parser.end
+                       ]
+                 , Parser.succeed nullPath |. Parser.end
+                 ]
+            )
+            data.parts
+
+celPathParser : Part -> Parser Path
+celPathParser part =
+    Parser.oneOf <|
+        Array.indexedMapToList
+            (\i cel ->
+                 Parser.succeed (\path -> { path | cel = i })
+                 |= endPathParser cel.name
+            )
+            part.cels
+
+keyframePathParser : Part -> Parser Path
+keyframePathParser part =
+    Parser.oneOf <|
+        Array.indexedMapToList
+            (\i keyframe ->
+                 Parser.succeed (\path -> { path | keyframe = i })
+                 |= endPathParser keyframe.name
+            )
+        part.keyframes
+
+
+endPathParser : String -> Parser Path
+endPathParser name =
+    Parser.succeed nullPath
+        |. Parser.backtrackable (Parser.keyword name)
+        |. nullPathParser
+
+nullPathParser : Parser Path
+nullPathParser =
+    Parser.succeed nullPath
+    |. Parser.oneOf [Parser.end, Parser.symbol "/" |. Parser.end]

@@ -6,6 +6,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 const outputPath = path.resolve(__dirname + '/dist');
 
 const config = {
+    mode: 'development',
     entry: './src/renderer.ts',
     output: {
         path: outputPath,
@@ -93,6 +94,7 @@ const config = {
 }
 
 const mainConfig = {
+    mode: 'development',
     target: 'electron-main',
     entry: './src/main.ts',
     output: {
@@ -127,6 +129,7 @@ const mainConfig = {
 };
 
 const rendererConfig = {
+    mode: 'development',
     target: 'electron-renderer',
     entry: './src/renderer',
     output: {
@@ -226,6 +229,10 @@ const rendererConfig = {
         // })
         // ],
     },
+
+    externals: [
+        // 'electron',
+    ]
 
 };
 

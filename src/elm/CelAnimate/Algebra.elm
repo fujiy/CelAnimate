@@ -113,11 +113,6 @@ intersects p q a b =
     betweens && d2 < Vec3.lengthSquared pq
 
 
-encodeVec3 : Vec3 -> Encode.Value
-encodeVec3 v =
-    Encode.list Encode.float [ Vec3.getX v, Vec3.getY v, Vec3.getZ v ]
-
-
 
 -- Meshes ----------------------------------------------------------------------
 
@@ -340,5 +335,17 @@ fromJust m =
         Nothing ->
             Debug.todo "Nothing"
 
+
 flip : (a -> b -> c) -> b -> a -> c
-flip f b a = f a b
+flip f b a =
+    f a b
+
+
+curry : (( a, b ) -> c) -> a -> b -> c
+curry f a b =
+    f ( a, b )
+
+
+uncurry : (a -> b -> c) -> ( a, b ) -> c
+uncurry f ( a, b ) =
+    f a b

@@ -1,12 +1,13 @@
 module CelAnimate.Html exposing (..)
 
 import CelAnimate.Algebra exposing (..)
+import CelAnimate.Data.Encode as Encode
 import DOM exposing (..)
 import Html exposing (Attribute, Html, i, input, span, text)
 import Html.Attributes exposing (attribute, class, property, type_, value)
 import Html.Events exposing (on, onClick, onInput, preventDefaultOn, targetChecked)
 import Json.Decode as Decode
-import Json.Encode as Encode
+import Json.Encode as Encode exposing (Value)
 import Math.Vector3 as Vec3 exposing (Vec3)
 import Maybe.Extra as Maybe
 import Round
@@ -39,17 +40,19 @@ slider min max step round x =
         ]
         []
 
+
 checkbox : Bool -> Html Bool
 checkbox check =
     input
-    [ type_ "checkbox"
-    , class """form-checkbox text-teal-700 bg-gray-800
+        [ type_ "checkbox"
+        , class """form-checkbox text-teal-700 bg-gray-800
              border-gray-700 outline-none m-1"""
-    , boolAttr "checked" check
-    , property "checked" <| Encode.bool check
-    , onCheck identity
-    ]
-    []
+        , boolAttr "checked" check
+        , property "checked" <| Encode.bool check
+        , onCheck identity
+        ]
+        []
+
 
 button : String -> msg -> Html msg
 button txt msg =
@@ -59,11 +62,11 @@ button txt msg =
         ]
         [ text txt ]
 
+
 onCheck : (Bool -> msg) -> Attribute msg
 onCheck tagger =
     preventDefaultOn "input" <|
         Decode.map (\checked -> ( tagger checked, True )) targetChecked
-
 
 
 onSelected : (Bool -> msg) -> Attribute msg
@@ -75,6 +78,10 @@ targetValue : Decode.Decoder a -> Decode.Decoder a
 targetValue =
     Decode.at [ "target", "value" ]
 
+
+targetData : Decode.Decoder a -> Decode.Decoder a
+targetData =
+    Decode.at [ "target", "data" ]
 
 targetSelected : Decode.Decoder Bool
 targetSelected =
@@ -117,17 +124,17 @@ boolAttr name b =
 
 position : Vec3 -> Attribute msg
 position v =
-    property "position" <| encodeVec3 v
+    property "position" <| Encode.vec3 v
 
 
 rotation : Vec3 -> Attribute msg
 rotation v =
-    property "rotation" <| encodeVec3 v
+    property "rotation" <| Encode.vec3 v
 
 
 lookAt : Vec3 -> Attribute msg
 lookAt v =
-    property "lookAt" <| encodeVec3 v
+    property "lookAt" <| Encode.vec3 v
 
 
 maybe : (a -> Html msg) -> Maybe a -> Html msg

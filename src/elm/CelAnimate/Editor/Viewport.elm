@@ -4,6 +4,7 @@ import Array exposing (Array)
 import Array.Extra as Array
 import CelAnimate.Algebra exposing (..)
 import CelAnimate.Data exposing (..)
+import CelAnimate.Data.Encode as Encode
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
 import CelAnimate.Mode.MeshEdit as MeshEdit
@@ -99,7 +100,7 @@ imagePlane image =
                 [ boolAttr "transparent" True
                 , floatAttr "opacity" 0.5
                 ]
-                [ node "three-texture" [ src image.src ] [] ]
+                [ node "three-texture" [ src image.uri ] [] ]
             ]
 
     else
@@ -160,12 +161,12 @@ toolView pv mode mcel mkeyframe mkeycel =
 body : ParameterVector -> Maybe Keyframe -> Array Part -> Three msg
 body pv mkeyframe parts =
     node "three-group" [] <|
+        List.concat <|
         Array.mapToList (partObject pv mkeyframe) parts
 
 
-partObject : ParameterVector -> Maybe Keyframe -> Part -> Three msg
+partObject : ParameterVector -> Maybe Keyframe -> Part -> List (Three msg)
 partObject pv mkeyframe part =
-    node "three-group" [] <|
         case mkeyframe of
             Just keyframe ->
                 List.map
@@ -183,6 +184,13 @@ partObject pv mkeyframe part =
                             celByName keycel.name part
                     )
                     keyframe.cels
+                ++
+                    Array.mapToList
+                    (\cel ->
+                        meshObject False True cel.image cel.mesh <|
+                            interpolate cel.interpolation pv
+                    )
+                    part.cels
 
             Nothing ->
                 Array.mapToList
@@ -192,12 +200,14 @@ partObject pv mkeyframe part =
                     )
                     part.cels
 
+-- meshObject : Bool -> Bool -> Image -> Mesh -> KeyCel -> Three msg
+-- meshObject 
 
 meshObject : Bool -> Bool -> Image -> Mesh -> KeyCel -> Three msg
 meshObject showMesh translucent image mesh key =
     let
         vertices =
-            Encode.array encodeVec3
+            Encode.array Encode.vec3
                 <| addMorph key.morph key.z mesh.vertices
 
         faces =
@@ -218,6 +228,8 @@ meshObject showMesh translucent image mesh key =
                     []
                 , Html.node "material-mesh-basic"
                     [ attribute "color" "#E53E3E"
+                    , boolAttr "transparent" True
+                    , floatAttr "opacity" 0.5
                     , boolAttr "wireframe" True
                     ]
                     []
@@ -226,7 +238,8 @@ meshObject showMesh translucent image mesh key =
           else
             text ""
         , Html.node "three-mesh"
-            []
+            [ floatAttr "render-order" key.z
+            ]
             [ Html.node "geometry-buffer"
                 [ property "vertices" vertices
                 , property "faces" faces
@@ -236,6 +249,7 @@ meshObject showMesh translucent image mesh key =
             , if isLoaded image then
                 Html.node "material-mesh-basic"
                     [ boolAttr "transparent" True
+                    , boolAttr "depth-test" False
                     , floatAttr "opacity" <|
                         if translucent then
                             0.5
@@ -244,7 +258,7 @@ meshObject showMesh translucent image mesh key =
                             key.opacity
                              else 0
                     ]
-                    [ node "three-texture" [ src image.src ] [] ]
+                    [ node "three-texture" [ src image.uri ] [] ]
 
               else
                 Html.node "material-mesh-basic"

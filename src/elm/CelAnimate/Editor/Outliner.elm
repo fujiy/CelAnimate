@@ -6,10 +6,12 @@ import CelAnimate.Data exposing (..)
 import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
 import Html exposing (Attribute, Html, div, input, label, node, p, span, text)
-import Html.Attributes exposing (class, selected, type_)
-import Html.Events exposing (onClick, onMouseUp)
+import Html.Attributes exposing (class, selected, type_, property)
+import CelAnimate.Data.Encode as Data
+import Html.Events exposing (onClick, onMouseUp, on)
 import Html.Keyed as Keyed
 import Html.Lazy exposing (lazy, lazy2, lazy3)
+import Json.Decode as Decode
 import Maybe.Extra as Maybe
 
 
@@ -24,15 +26,27 @@ view selection data =
         div
             [ class "group pointer-events-auto overflow-visible"
             ]
-            [ icon_ "chevron-down"
-            , span [ class "shadow-lg" ] [ text data.name ]
-            , node "context-menu"
+            [
+              span [ class "shadow-lg m-1" ] [ text data.name ]
+            , node "file-accesor"
+                [ property "data" <| Data.encode data
+                , on "fileload"
+                    <| Decode.map (FileAction << DataLoad)
+                        <|  targetData Decode.value
+                ] 
+                [ Html.button
+                    [type_ "save"] [icon_ "save"]
+                , Html.button
+                    [type_ "open" ] [icon_ "folder-open"]
+                ]
+            ]
+            ::
+            node "context-menu"
                 [ class
                     "bg-gray-700 shadow-xl w-32 "
                 ]
                 [ contextMenuItem "New Part" <| ModifyData newPart
                 ]
-            ]
             :: Array.indexedMapToList
                 (\i part -> partView selection (Path i -1 -1) part)
                 data.parts
