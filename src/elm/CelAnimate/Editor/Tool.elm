@@ -96,7 +96,7 @@ morphModeProps state settings =
                         | morphMove = f settings.morphMove x
                     }
             in
-            [ paramSlider "radius" 0.01 10 0.01 2 settings.morphMove.radius
+            [ paramSlider "radius" 0.01 5 0.01 2 settings.morphMove.radius
                 |> Html.map
                     (update <| \s x -> { s | radius = x })
             ]
@@ -156,7 +156,7 @@ paramSlider :
 paramSlider name min max step round x =
     div [ class "bg-gray-700 m-px p-1" ]
         [ p [] [ text name, text ": ", text <| Round.round round x ]
-        , slider min max step round x
+        , slider min max step round x |> Html.map Tuple.second
         ]
 
 

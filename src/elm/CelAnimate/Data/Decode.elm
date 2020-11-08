@@ -1,6 +1,5 @@
 module CelAnimate.Data.Decode exposing (..)
 
-
 import Bytes exposing (Bytes, Endianness(..))
 import Bytes.Decode as Bytes
 import CelAnimate.Algebra exposing (..)
@@ -12,12 +11,12 @@ import Math.Vector2 as Vec2 exposing (Vec2)
 import Math.Vector3 as Vec3 exposing (Vec3)
 import Maybe.Extra as Maybe
 
+
+
 -- decode : Bytes -> Maybe (Data, List (String, File))
 -- decode =
 --     Bytes.decode
 --         <| Bytes.map2 Tuple.pair decodeData decodeImages
-
-
 -- decodeImages : Bytes.Decoder (List (String, File))
 -- decodeImages =
 --     Bytes.unsignedInt32 LE
@@ -33,7 +32,6 @@ import Maybe.Extra as Maybe
 --                      decodeImage
 --                 )
 --            )
-
 -- decodeImage : Bytes.Decoder (String, File)
 -- decodeImage =
 --     Bytes.map2 Tuple.pair
@@ -48,7 +46,6 @@ import Maybe.Extra as Maybe
 --                   Err e -> let _ = Debug.log "err" e in Bytes.fail
 --                   )
 --     )
-
 -- decodeData : Bytes.Decoder Data
 -- decodeData =
 --     Bytes.unsignedInt32 LE
@@ -60,62 +57,77 @@ import Maybe.Extra as Maybe
 --                     Err _ -> Bytes.fail
 --            )
 
-decode : Value -> Maybe (Data, List (Path, String, String))
+
+decode : Value -> Maybe ( Data, List ( Path, String, String ) )
 decode =
     decodeValue
-    (map2
-        (\d images ->
-             (d
-             , List.map
-             (\(path, uri) ->
-                  let ps = String.split "/" path
-                      init = List.init ps |> Maybe.withDefault []
-                      last = List.last ps |> Maybe.withDefault ""
-                  in ( parsePath d <| String.join "/" init, last, uri)
-             ) images
-             )
-        )
-        decodeData
-        decodeImages
-    )
-    >> Result.toMaybe
+        (map2
+            (\d images ->
+                ( d
+                , List.map
+                    (\( path, uri ) ->
+                        let
+                            ps =
+                                String.split "/" path
 
-decodeImages : Decoder (List (String, String))
+                            init =
+                                List.init ps |> Maybe.withDefault []
+
+                            last =
+                                List.last ps |> Maybe.withDefault ""
+                        in
+                        ( parsePath d <| String.join "/" init, last, uri )
+                    )
+                    images
+                )
+            )
+            decodeData
+            decodeImages
+        )
+        >> Result.toMaybe
+
+
+decodeImages : Decoder (List ( String, String ))
 decodeImages =
     list
-    (field "type" string
-        |> andThen
-           (\s ->
-                if s == "png" then
-                    map2 Tuple.pair (field "path" string) (field "data" string)
-                else
-                    fail "is not png"
-           )
-        |> maybe
-    )
-    |> map Maybe.values
+        (field "type" string
+            |> andThen
+                (\s ->
+                    if s == "png" then
+                        map2 Tuple.pair (field "path" string) (field "data" string)
+
+                    else
+                        fail "is not png"
+                )
+            |> maybe
+        )
+        |> map Maybe.values
+
 
 decodeData : Decoder Data
-decodeData  =
+decodeData =
     list
-    (field "path" string
-    |> andThen
-         (\s ->
-              if s == "data.json" then
-                  field "data" data
-              else
-                  fail "is not data.json"
-         )
-    |> maybe
-    )
-    |> map Maybe.orList
-    |> andThen (Maybe.unwrap (fail "no") succeed)
+        (field "path" string
+            |> andThen
+                (\s ->
+                    if s == "data.json" then
+                        field "data" data
+
+                    else
+                        fail "is not data.json"
+                )
+            |> maybe
+        )
+        |> map Maybe.orList
+        |> andThen (Maybe.unwrap (fail "no") succeed)
+
 
 data : Decoder Data
 data =
     map2 Data
         (field "name" string)
         (field "parts" <| array part)
+
 
 part : Decoder Part
 part =
@@ -125,6 +137,7 @@ part =
         (field "parameters" <| dict parameterDesc)
         (field "keyframes" <| array keyframe)
 
+
 cel : Decoder Cel
 cel =
     map4 Cel
@@ -133,12 +146,14 @@ cel =
         (field "mesh" mesh)
         (succeed zeroInterpolate)
 
+
 keyframe : Decoder Keyframe
 keyframe =
     map3 Keyframe
         (field "name" string)
         (field "vector" <| dict float)
         (field "cels" <| list keycel)
+
 
 keycel : Decoder KeyCel
 keycel =
@@ -149,9 +164,15 @@ keycel =
         (field "show" bool)
         (field "z" float)
 
+
 image : Decoder Image
 image =
-    map (\name -> Image name "" (0, 0) 500) string
+    map4 Image
+        (field "name" string)
+        (succeed "")
+        (succeed ( 0, 0 ))
+        (field "ppm" float)
+
 
 parameter : Decoder Parameter
 parameter =
@@ -159,21 +180,23 @@ parameter =
         (field "desc" parameterDesc)
         (field "value" float)
 
+
 parameterDesc : Decoder ParameterDesc
 parameterDesc =
     map2 ParameterDesc
         (field "name" string)
         (field "kind" parameterKind)
 
+
 parameterKind : Decoder ParameterKind
 parameterKind =
     oneOf
         [ map (always Open) <| text "open"
-        , map3 (\_ min max -> Between {min = min, max = max})
+        , map3 (\_ min max -> Between { min = min, max = max })
             (field "type" <| text "between")
             (field "min" float)
             (field "max" float)
-        , map3 (\_ from to -> Cyclic {from = from, to = to})
+        , map3 (\_ from to -> Cyclic { from = from, to = to })
             (field "type" <| text "cyclic")
             (field "from" float)
             (field "to" float)
@@ -182,6 +205,7 @@ parameterKind =
             (field "number" int)
         ]
 
+
 mesh : Decoder Mesh
 mesh =
     map3 Mesh
@@ -189,38 +213,60 @@ mesh =
         (field "faces" <| array face)
         (field "mapping" <| array vec2)
 
+
 face : Decoder Face
 face =
     andThen
-    (\xs ->
-         case xs of
-             [i, j, k] -> succeed (i, j, k)
-             _ -> fail "Needs three items"
-    )
-    <| list int
+        (\xs ->
+            case xs of
+                [ i, j, k ] ->
+                    succeed ( i, j, k )
+
+                _ ->
+                    fail "Needs three items"
+        )
+    <|
+        list int
+
 
 vec2 : Decoder Vec2
 vec2 =
     andThen
-    (\xs ->
-         case xs of
-             [x, y] -> succeed <| Vec2.vec2 x y
-             _ -> fail "Needs two items"
-    )
-    <| list float
+        (\xs ->
+            case xs of
+                [ x, y ] ->
+                    succeed <| Vec2.vec2 x y
+
+                _ ->
+                    fail "Needs two items"
+        )
+    <|
+        list float
+
 
 vec3 : Decoder Vec3
 vec3 =
     andThen
-    (\xs ->
-         case xs of
-             [x, y, z] -> succeed <| Vec3.vec3 x y z
-             _ -> fail "Needs three items"
-    )
-    <| list float
+        (\xs ->
+            case xs of
+                [ x, y, z ] ->
+                    succeed <| Vec3.vec3 x y z
+
+                _ ->
+                    fail "Needs three items"
+        )
+    <|
+        list float
+
 
 text : String -> Decoder ()
 text str =
     andThen
-    (\s -> if s == str then succeed () else fail "not matched")
+        (\s ->
+            if s == str then
+                succeed ()
+
+            else
+                fail "not matched"
+        )
         string

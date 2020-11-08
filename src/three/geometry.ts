@@ -7,8 +7,9 @@ import { ThreeMesh } from './mesh'
 
 export class ThreeGeometry extends ThreeElement {
     geometry: THREE.BufferGeometry = null
-    constructor() {
-        super()
+
+    disconnect() {
+        this.geometry.dispose()
     }
 }
 

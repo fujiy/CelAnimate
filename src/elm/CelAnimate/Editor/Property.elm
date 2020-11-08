@@ -9,9 +9,9 @@ import CelAnimate.Html exposing (..)
 import CelAnimate.Mode.MeshEdit as MeshEdit
 import Dict
 import File
-import Html exposing (Html, div, img, p, span, text, input, label, node)
+import Html exposing (Html, div, img, input, label, node, p, span, text)
 import Html.Attributes as Attr exposing (class, disabled, src, type_, value)
-import Html.Events as Events exposing (onClick, onInput)
+import Html.Events as Events exposing (onClick)
 import Json.Decode as Decode
 import Maybe
 import Maybe.Extra as Maybe
@@ -37,7 +37,8 @@ partProperties part =
         [ p [] [ text "Part: ", text part.name ]
         , p []
             [ button "Calcurate interpolation" <|
-                ModifyData calcInterpolationOfSelectedPart
+                ModifyData <|
+                    \sel -> updatePart sel calcInterpolationOfPart
             ]
         ]
 
@@ -68,18 +69,21 @@ celProperties pv path mkeyframe cel =
             , text <| String.fromFloat <| Tuple.second cel.image.size
             , text "px"
             ]
-        , p [class "my-1"]
+        , p [ class "my-1" ]
             [ input
-                  [type_ "number"
-                  , class "w-16 bg-gray-800 outline-none"
-                  , value <| String.fromFloat cel.image.ppm
-                  , onInput <| \val ->
-                      ModifyData <| \sel ->
-                          case String.toFloat val of
-                              Just ppm -> 
-                                  updateCel sel <| setPPM ppm
-                              Nothing -> identity
-                  ] []
+                [ type_ "number"
+                , class "w-16 bg-gray-800 outline-none"
+                , value <| String.fromFloat cel.image.ppm
+                , onInput <|
+                    Decode.map
+                        (\ppm ->
+                            ModifyData <|
+                                \sel ->
+                                    updateCel sel <| setPPM ppm
+                        )
+                        Decode.float
+                ]
+                []
             , text " pixel per meter"
             ]
         , if isEmptyMesh cel.mesh then
@@ -106,7 +110,8 @@ celProperties pv path mkeyframe cel =
                     [ button "Use in the keyframe" <|
                         ModifyData <|
                             \selection ->
-                                updateKeyframe selection <| newKeyCel pv cel
+                                updateKeyframeAndCalc selection <|
+                                    newKeyCel pv cel
                     ]
         ]
 
@@ -140,52 +145,79 @@ keyframeProperties pv selection data =
 
                     Just keyframe ->
                         [ p [] [ text "Keyframe: ", text keyframe.name ]
-                        , div [] <| List.map keyCelProperties keyframe.cels
+                        , div [] <|
+                            List.map
+                                (\keycel ->
+                                    keyCelProperties
+                                        selection
+                                        (keyCelPath selection data keycel)
+                                        keycel
+                                )
+                                keyframe.cels
                         , node "context-menu"
                             [ class "bg-gray-700 shadow-xl w-32 "
                             ]
-                              [ p
+                            [ p
                                 [ class "hover:bg-gray-800 p-1"
                                 , onClick <| ModifyData deleteKeyframe
                                 ]
                                 [ text "Delete Keyframe" ]
-                              ]
+                            ]
                         ]
         )
     <|
         selectedPart selection data
 
 
-keyCelProperties : KeyCel -> Html Msg
-keyCelProperties keycel =
+keyCelProperties : Selection -> Path -> KeyCel -> Html Msg
+keyCelProperties selection path keycel =
     div [ class "m-1 border-gray-800 border-t" ]
-        [ p [] [ text keycel.name ]
+        [ p
+            [ onClick <| SelectData path
+            , if matchCel selection path then
+                class "bg-teal-700"
+
+              else
+                class ""
+            ]
+            [ text keycel.name ]
         , p []
             [ label []
-                  [ text "show"
-                  , checkbox keycel.show
-                  |> Html.map
-                       (\check ->
+                [ text "show"
+                , checkbox keycel.show
+                    |> Html.map
+                        (\check ->
                             ModifyData <|
-                            flip updateKeyCel (\k -> { k | show = check}))
-                  ]
+                                \_ ->
+                                    updateKeyCelAndCalc path
+                                        (\k -> { k | show = check })
+                        )
+                ]
             ]
         , p []
             [ text "opacity: "
             , text <| Round.round 2 keycel.opacity
             , slider 0 1 0.01 2 keycel.opacity
                 |> Html.map
-                   (\v ->
+                    (\( c, v ) ->
                         ModifyData <|
-                        flip updateKeyCel (\k -> { k | opacity = v}))
+                            \_ ->
+                                updateKeyCelAndCalcWhen c
+                                    path
+                                    (\k -> { k | opacity = v })
+                    )
             ]
-         , p []
+        , p []
             [ text "z: "
             , text <| Round.round 3 keycel.z
             , slider -0.1 0.1 0.001 3 keycel.z
-            |> Html.map
-                   (\v ->
+                |> Html.map
+                    (\( c, v ) ->
                         ModifyData <|
-                        flip updateKeyCel (\k -> { k | z = v}))
+                            \_ ->
+                                updateKeyCelAndCalcWhen c
+                                    path
+                                    (\k -> { k | z = v })
+                    )
             ]
         ]

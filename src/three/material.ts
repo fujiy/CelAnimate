@@ -24,6 +24,9 @@ export class ThreeMaterial extends ThreeElement {
                 break
         }
     }
+    disconnect() {
+        this.material.dispose()
+    }
 }
 
 export class LineBasicMaterial extends ThreeMaterial {
@@ -80,6 +83,9 @@ export class ThreeTexture extends ThreeElement {
     willConnect() {
         const loader = new THREE.TextureLoader()
         this.texture = loader.load(this.src || this.attr('src'))
+    }
+    disconnect() {
+        this.texture.dispose()
     }
 }
 

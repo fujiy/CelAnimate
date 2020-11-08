@@ -31,7 +31,7 @@ start cel =
 
 finish : Mesh -> Selection -> Data -> Data
 finish mesh selection =
-    updateCel selection (\cel -> { cel | mesh = mesh })
+    updateCelAndCalc selection (\cel -> { cel | mesh = mesh })
 
 
 inProgress : MeshEditToolState -> Result

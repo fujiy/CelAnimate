@@ -160,36 +160,45 @@ update message model =
 
         FileAction msg ->
             case msg of
-
                 DataLoad value ->
                     case Decode.decode value of
-                        Just (data, images) ->
-                            ( {model | data = data}
-                            , Cmd.batch
-                                <| List.map
-                                    (\(path, name, uri) ->
-                                         Task.perform
-                                         (\_ -> FileAction
-                                              <| ImageLoaded path name uri)
-                                         <| Task.succeed ()
+                        Just ( data, images ) ->
+                            ( { model
+                                | data =
+                                    { data
+                                        | parts =
+                                            Array.map calcInterpolationOfPart
+                                                data.parts
+                                    }
+                              }
+                            , Cmd.batch <|
+                                List.map
+                                    (\( path, name, uri ) ->
+                                        Task.perform
+                                            (\_ ->
+                                                FileAction <|
+                                                    ImageLoaded path name uri
+                                            )
+                                        <|
+                                            Task.succeed ()
                                     )
                                     images
                             )
+
                         Nothing ->
-                            ( model, Cmd.none)
+                            ( model, Cmd.none )
+
                 -- DataSelect ->
                 --     ( model
                 --     , Select.file [ ] <|
                 --         FileAction
                 --             << DataSelected
                 --     )
-
                 -- DataSelected file ->
                 --     ( model
                 --     , File.toBytes file
                 --         |> Task.perform (FileAction << DataLoaded file)
                 --     )
-
                 -- DataLoaded file bytes ->
                 --     case Decode.decode bytes of
                 --         Just (d, images) ->
@@ -211,23 +220,19 @@ update message model =
                 --                     )
                 --                     images
                 --             )
-
                 --         Nothing ->
                 --             (model , Cmd.none)
-
                 -- DataSave ->
                 --     ( model
                 --     , Encode.encode model.data
                 --         |> Task.perform (FileAction << DataWrite)
                 --     )
-
                 -- DataWrite bytes ->
                 --     ( model
                 --     , Download.bytes model.data.name
                 --         "application/octet-stream"
                 --         bytes
                 --     )
-
                 ImageSelect ->
                     ( model
                     , Select.file [ "image/jpeg image/png" ] <|
@@ -238,8 +243,8 @@ update message model =
                 ImageSelected path file ->
                     ( model
                     , File.toUrl file
-                    |> Task.perform
-                          (FileAction << ImageLoaded path (File.name file) )
+                        |> Task.perform
+                            (FileAction << ImageLoaded path (File.name file))
                     )
 
                 ImageLoaded path name uri ->

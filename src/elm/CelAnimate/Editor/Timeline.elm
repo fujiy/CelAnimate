@@ -8,7 +8,7 @@ import CelAnimate.Editor.Model exposing (..)
 import CelAnimate.Html exposing (..)
 import DOM
 import Dict
-import Html exposing (Attribute, Html, div, input, label, node, span, text, p)
+import Html exposing (Attribute, Html, div, input, label, node, p, span, text)
 import Html.Attributes as Attr exposing (class, property, style, type_)
 import Html.Events as Events exposing (on, onClick)
 import Html.Events.Extra.Pointer as Pointer
@@ -23,7 +23,7 @@ import Set
 type ParameterMsg
     = Use ParameterDesc Bool
     | SetValue ParameterDesc Float
-    | MoveMarker ParameterDesc Float
+    | MoveMarker Bool ParameterDesc Float
     | SelectMarker Int
 
 
@@ -69,17 +69,18 @@ view pv selection data =
                         (SelectData { selection | keyframe = -1 })
                         (ChangeParameters <| Dict.singleton desc.name value)
 
-                MoveMarker desc value ->
+                MoveMarker calc desc value ->
                     Batch
                         (ChangeParameters <| Dict.singleton desc.name value)
                         (ModifyData <|
                             \s ->
-                                updateKeyframe s <|
+                                updateKeyframeAndCalcWhen calc s <|
                                     \keyframe ->
                                         { keyframe
                                             | vector =
                                                 Dict.insert desc.name
-                                              value keyframe.vector
+                                                    value
+                                                    keyframe.vector
                                         }
                         )
 
@@ -131,7 +132,7 @@ parameter p using markers markerSelection =
         [ div [ class "bg-gray-700 flex flex-row items-center" ]
             [ label [ class "w-24" ]
                 [ checkbox using
-                |> Html.map (Use p.desc)
+                    |> Html.map (Use p.desc)
                 , span [] [ text p.desc.name ]
                 ]
             , slider using
@@ -146,8 +147,8 @@ parameter p using markers markerSelection =
                             Change value ->
                                 SetValue p.desc value
 
-                            Move value ->
-                                MoveMarker p.desc value
+                            Move calc value ->
+                                MoveMarker calc p.desc value
 
                             Select i ->
                                 SelectMarker i
@@ -156,10 +157,9 @@ parameter p using markers markerSelection =
         ]
 
 
-
 type SliderMsg
     = Change Float
-    | Move Float
+    | Move Bool Float
     | Select Int
 
 
@@ -201,11 +201,10 @@ slider using min max value markers markerSelection =
                     String.fromInt <|
                         abs (round <| 40 - abs marker.projection * 40)
                 , on "down" <| Decode.succeed <| Select i
-                , Events.on "change" <|
-                    Decode.map Move <|
-                        targetValue Decode.float
+                , onChange <| Decode.map (Move False) Decode.float
+                , onInput <| Decode.map (Move True) Decode.float
                 ]
-                [ ]
+                []
     in
     div [ class "flex flex-grow flex-shrink " ]
         [ node "slider-track"

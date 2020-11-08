@@ -5,7 +5,7 @@ import CelAnimate.Data.Encode as Encode
 import DOM exposing (..)
 import Html exposing (Attribute, Html, i, input, span, text)
 import Html.Attributes exposing (attribute, class, property, type_, value)
-import Html.Events exposing (on, onClick, onInput, preventDefaultOn, targetChecked)
+import Html.Events as Events exposing (on, onClick, preventDefaultOn, stopPropagationOn, targetChecked)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Math.Vector3 as Vec3 exposing (Vec3)
@@ -27,13 +27,19 @@ icon_ name =
     span [ class "p-1" ] [ i [ class <| "select-none fas fa-" ++ name ] [] ]
 
 
-slider : Float -> Float -> Float -> Int -> Float -> Html Float
+slider : Float -> Float -> Float -> Int -> Float -> Html ( Bool, Float )
 slider min max step round x =
     input
         [ type_ "range"
         , class "w-32"
         , value <| Round.round round x
-        , onInput <| Maybe.withDefault x << String.toFloat
+        , Events.onInput <|
+            Tuple.pair False
+                << Maybe.withDefault x
+                << String.toFloat
+        , on "pointerup" <|
+            Decode.map (Tuple.pair True) <|
+                targetValue Decode.float
         , floatAttr "min" min
         , floatAttr "max" max
         , floatAttr "step" step
@@ -63,6 +69,18 @@ button txt msg =
         [ text txt ]
 
 
+onChange : Decode.Decoder msg -> Attribute msg
+onChange dc =
+    stopPropagationOn "change" <|
+        Decode.map2 Tuple.pair (targetValue dc) (Decode.succeed True)
+
+
+onInput : Decode.Decoder msg -> Attribute msg
+onInput dc =
+    stopPropagationOn "input" <|
+        Decode.map2 Tuple.pair (targetValue dc) (Decode.succeed True)
+
+
 onCheck : (Bool -> msg) -> Attribute msg
 onCheck tagger =
     preventDefaultOn "input" <|
@@ -82,6 +100,7 @@ targetValue =
 targetData : Decode.Decoder a -> Decode.Decoder a
 targetData =
     Decode.at [ "target", "data" ]
+
 
 targetSelected : Decode.Decoder Bool
 targetSelected =

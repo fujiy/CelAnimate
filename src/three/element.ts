@@ -38,7 +38,9 @@ export class ThreeElement extends HTMLElement {
             }
         })
     }
-
+    disconnectedCallback() {
+        this.disconnect()
+    }
 
     connectedBubble() {
         if (this.childrenCount <= 1) {
@@ -53,6 +55,7 @@ export class ThreeElement extends HTMLElement {
     attrChanged(name: string, value: any) { }
     willConnect() { }
     didConnect() { }
+    disconnect() { }
 }
 
 
@@ -66,6 +69,7 @@ export class ThreeObject extends ThreeElement {
     constructor() {
         super();
         this.object3d = null;
+        console.log(this)
     }
     static get observedAttributes(): string[] {
         return ['render-order'];
@@ -81,6 +85,7 @@ export class ThreeObject extends ThreeElement {
         }
     }
     disconnectedCallback() {
+        super.disconnectedCallback()
         if (!this.parentElement) {
             this.parent.object3d.remove(this.object3d)
         }

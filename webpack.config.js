@@ -171,10 +171,10 @@ const rendererConfig = {
             {
                 test:    /\.elm$/,
                 exclude: [/elm-stuff/, /node_modules/],
-                use:  'elm-webpack-loader?verbose=true',
-                // options: {
-                    // debug: true,
-                // }
+                loader:  'elm-webpack-loader?verbose=true',
+                options: {
+                    debug: false,
+                }
             },
             {
                 test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,

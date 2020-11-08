@@ -51,13 +51,12 @@ type ToolEvent
 
 
 type FileMsg
-    =
-     --  DataSelect
-    -- | DataSelected File
-    -- | DataLoaded File Bytes
-    -- | DataSave
-    -- | DataWrite Bytes
-     DataLoad Value
+    = --  DataSelect
+      -- | DataSelected File
+      -- | DataLoaded File Bytes
+      -- | DataSave
+      -- | DataWrite Bytes
+      DataLoad Value
     | ImageSelect
     | ImageSelected Path File
     | ImageLoaded Path String String
@@ -119,7 +118,7 @@ type alias CameraState =
 
 initCameraState : CameraState
 initCameraState =
-    { position = vec3 0 0 3
+    { position = vec3 0 0 4
     , lookAt = vec3 0 0 0
     , fov = 50
     , aspect = 1
@@ -156,7 +155,7 @@ initToolSettings =
     { polygonDraw = { radius = 0.2 }
     , polygonErase = { radius = 0.2 }
     , polygonMove = { radius = 0.2 }
-    , morphMove = { radius = 10 }
+    , morphMove = { radius = 1 }
     }
 
 

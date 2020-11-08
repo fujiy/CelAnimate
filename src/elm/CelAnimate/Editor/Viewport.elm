@@ -16,6 +16,7 @@ import Dict
 import Html exposing (Html, node, text)
 import Html.Attributes exposing (attribute, class, id, property, src)
 import Html.Events.Extra.Pointer as Pointer
+import Html.Lazy exposing (..)
 import Json.Encode as Encode
 import List.Extra as List
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
@@ -56,11 +57,12 @@ modelScene model =
         , attribute "background" "#1A202C"
         ]
         [ case model.mode of
-            MorphMode _ using ->
+            MorphMode state using ->
                 body
+                    model.mode
                     model.parameters
-                    (selectedKeyframe model.selection model.data)
-                    model.data.parts
+                    model.selection
+                    model.data
 
             MeshEditMode state using mesh ->
                 selectedCel model.selection model.data
@@ -123,7 +125,7 @@ toolView pv mode mcel mkeyframe mkeycel =
                 [ maybe_ <|
                     Maybe.map3
                         (\cel keyframe keycel ->
-                            meshObject True False cel.image cel.mesh <|
+                            meshWireframe cel.mesh <|
                                 if using then
                                     { keycel | morph = Morph.progress state }
 
@@ -137,78 +139,90 @@ toolView pv mode mcel mkeyframe mkeycel =
                 ]
 
             MeshEditMode state using mesh ->
-                if using then
-                    [ maybe
-                        (\cel ->
-                            meshObject True
-                                False
-                                cel.image
-                                (MeshEdit.progress cel.image state)
-                                zeroKeyCel
-                        )
-                        mcel
-                    ]
+                let
+                    editingMesh cel =
+                        if using then
+                            MeshEdit.progress cel.image state
 
-                else
-                    [ maybe
-                        (\cel ->
-                            meshObject True False cel.image mesh zeroKeyCel
-                        )
-                        mcel
-                    ]
+                        else
+                            mesh
+                in
+                Maybe.unwrap
+                    []
+                    (\cel ->
+                        [ meshObject
+                            cel.image
+                            (editingMesh cel)
+                            zeroKeyCel
+                        , meshWireframe
+                            (editingMesh cel)
+                            zeroKeyCel
+                        ]
+                    )
+                    mcel
 
 
-body : ParameterVector -> Maybe Keyframe -> Array Part -> Three msg
-body pv mkeyframe parts =
+body : ModeState -> ParameterVector -> Selection -> Data -> Three msg
+body =
+    lazy4 body_
+
+
+body_ : ModeState -> ParameterVector -> Selection -> Data -> Three msg
+body_ mode pv selection data =
     node "three-group" [] <|
         List.concat <|
-        Array.mapToList (partObject pv mkeyframe) parts
+            forParts data <|
+                partObject mode pv selection
 
 
-partObject : ParameterVector -> Maybe Keyframe -> Part -> List (Three msg)
-partObject pv mkeyframe part =
-        case mkeyframe of
-            Just keyframe ->
-                List.map
-                    (\keycel ->
-                        maybe
-                            (\cel ->
-                                meshObject
-                                    False
-                                    True
-                                    cel.image
-                                    cel.mesh
-                                    keycel
-                            )
-                        <|
-                            celByName keycel.name part
-                    )
-                    keyframe.cels
-                ++
-                    Array.mapToList
-                    (\cel ->
-                        meshObject False True cel.image cel.mesh <|
-                            interpolate cel.interpolation pv
-                    )
-                    part.cels
+partObject :
+    ModeState
+    -> ParameterVector
+    -> Selection
+    -> Path
+    -> Part
+    -> List (Three msg)
+partObject mode pv selection path part =
+    forCels path
+        part
+        (\p cel ->
+            let
+                ip =
+                    interpolate cel.interpolation pv
 
-            Nothing ->
-                Array.mapToList
-                    (\cel ->
-                        meshObject False False cel.image cel.mesh <|
-                            interpolate cel.interpolation pv
-                    )
-                    part.cels
+                keycel =
+                    case mode of
+                        MorphMode state using ->
+                            if matchCel p selection then
+                                if using then
+                                    { ip | morph = Morph.progress state }
 
--- meshObject : Bool -> Bool -> Image -> Mesh -> KeyCel -> Three msg
--- meshObject 
+                                else
+                                    Array.get selection.keyframe part.keyframes
+                                        |> Maybe.andThen (keyCelMatches cel)
+                                        |> Maybe.withDefault ip
 
-meshObject : Bool -> Bool -> Image -> Mesh -> KeyCel -> Three msg
-meshObject showMesh translucent image mesh key =
+                            else
+                                ip
+
+                        _ ->
+                            ip
+            in
+            meshObject cel.image cel.mesh keycel
+        )
+
+
+meshObject : Image -> Mesh -> KeyCel -> Three msg
+meshObject =
+    lazy3 meshObject_
+
+
+meshObject_ : Image -> Mesh -> KeyCel -> Three msg
+meshObject_ image mesh key =
     let
         vertices =
-            Encode.array Encode.vec3
-                <| addMorph key.morph key.z mesh.vertices
+            Encode.array Encode.vec3 <|
+                addMorph key.morph key.z mesh.vertices
 
         faces =
             Encode.array encodeFace mesh.faces
@@ -216,58 +230,65 @@ meshObject showMesh translucent image mesh key =
         uvs =
             Encode.array encodeUVVec mesh.mapping
     in
-    Html.node "three-group"
-        []
-        [ if showMesh then
-            Html.node "three-mesh"
-                [ position <| vec3 0 0 0.01 ]
-                [ Html.node "geometry-buffer"
-                    [ property "vertices" vertices
-                    , property "faces" faces
-                    ]
-                    []
-                , Html.node "material-mesh-basic"
-                    [ attribute "color" "#E53E3E"
-                    , boolAttr "transparent" True
-                    , floatAttr "opacity" 0.5
-                    , boolAttr "wireframe" True
-                    ]
-                    []
+    Html.node "three-mesh"
+        [ floatAttr "render-order" key.z
+        ]
+        [ Html.node "geometry-buffer"
+            [ property "vertices" vertices
+            , property "faces" faces
+            , property "uvs" uvs
+            ]
+            []
+        , if isLoaded image then
+            Html.node "material-mesh-basic"
+                [ boolAttr "transparent" True
+                , boolAttr "depth-test" False
+                , floatAttr "opacity" <|
+                    if key.show then
+                        key.opacity
+
+                    else
+                        0
                 ]
+                [ node "three-texture" [ src image.uri ] [] ]
 
           else
-            text ""
-        , Html.node "three-mesh"
-            [ floatAttr "render-order" key.z
-            ]
-            [ Html.node "geometry-buffer"
-                [ property "vertices" vertices
-                , property "faces" faces
-                , property "uvs" uvs
+            Html.node "material-mesh-basic"
+                [ attribute "color" "white"
+                , boolAttr "transparent" True
+                , floatAttr "opacity" 0.5
                 ]
                 []
-            , if isLoaded image then
-                Html.node "material-mesh-basic"
-                    [ boolAttr "transparent" True
-                    , boolAttr "depth-test" False
-                    , floatAttr "opacity" <|
-                        if translucent then
-                            0.5
+        ]
 
-                        else if key.show then
-                            key.opacity
-                             else 0
-                    ]
-                    [ node "three-texture" [ src image.uri ] [] ]
 
-              else
-                Html.node "material-mesh-basic"
-                    [ attribute "color" "white"
-                    , boolAttr "transparent" True
-                    , floatAttr "opacity" 0.5
-                    ]
-                    []
+meshWireframe : Mesh -> KeyCel -> Three msg
+meshWireframe mesh key =
+    let
+        vertices =
+            Encode.array Encode.vec3 <|
+                addMorph key.morph key.z mesh.vertices
+
+        faces =
+            Encode.array encodeFace mesh.faces
+
+        uvs =
+            Encode.array encodeUVVec mesh.mapping
+    in
+    Html.node "three-mesh"
+        [ floatAttr "render-order" 1 ]
+        [ Html.node "geometry-buffer"
+            [ property "vertices" vertices
+            , property "faces" faces
             ]
+            []
+        , Html.node "material-mesh-basic"
+            [ attribute "color" "#E53E3E"
+            , boolAttr "transparent" True
+            , floatAttr "opacity" 0.5
+            , boolAttr "wireframe" True
+            ]
+            []
         ]
 
 

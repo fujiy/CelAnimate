@@ -12,7 +12,8 @@ import Math.Vector2 as Vec2 exposing (Vec2)
 import Math.Vector3 as Vec3 exposing (Vec3)
 import Task exposing (Task)
 
- 
+
+
 -- encode : Data -> Task x Bytes
 -- encode d =
 --     Task.map
@@ -23,8 +24,6 @@ import Task exposing (Task)
 --         )
 --     <|
 --         encodeImages d
-
-
 -- encodeImages : Data -> Task x Encoder
 -- encodeImages d =
 --     let
@@ -48,8 +47,6 @@ import Task exposing (Task)
 --                     Bytes.unsignedInt32 LE (List.length files)
 --                         :: List.map (uncurry encodeImage) files
 --             )
-
-
 -- encodeImage : String -> Bytes -> Encoder
 -- encodeImage src file =
 --     Bytes.sequence
@@ -58,8 +55,6 @@ import Task exposing (Task)
 --         , Bytes.unsignedInt32 LE <| Bytes.width file
 --         , Bytes.bytes file
 --         ]
-
-
 -- encodeData : Data -> Encoder
 -- encodeData d =
 --     let
@@ -70,51 +65,49 @@ import Task exposing (Task)
 --         [ Bytes.unsignedInt32 LE <| Bytes.getStringWidth str
 --         , Bytes.string str
 --         ]
-
-
 -- pathNameImages : Data -> Data
 -- pathNameImages d =
 --     let
 --         goPart p =
 --             { p | cels = Array.map (goCel p.name) p.cels }
-
 --         goCel path c =
 --             { c | image = goImage (path ++ "/" ++ c.name) c.image }
-
 --         goImage path i =
 --             { i | src = path ++ "/" ++ imageName i }
 --     in
 --     { d | parts = Array.map goPart d.parts }
 
+
 encode : Data -> Value
 encode d =
     list identity <|
-        object 
-              [("path", string "data.json")
-              , ("data", data d)
-              , ("type", string "json")
-              ]
-       :: List.map
-           (\(path, i) ->
-                object
-                [("path", string path)
-                , ("data", string i.uri)
-                , ("type", string "png")
-                ]
+        object
+            [ ( "path", string "data.json" )
+            , ( "data", data d )
+            , ( "type", string "json" )
+            ]
+            :: List.map
+                (\( path, i ) ->
+                    object
+                        [ ( "path", string path )
+                        , ( "data", string i.uri )
+                        , ( "type", string "png" )
+                        ]
                 )
-           (allImages d)
+                (allImages d)
 
-allImages : Data -> List (String, Image)
+
+allImages : Data -> List ( String, Image )
 allImages d =
     Array.mapToList
         (\p ->
-             Array.mapToList
-             (\c ->
-                  (p.name ++ "/" ++ c.name ++ "/" ++ c.image.name
-                  , c.image
-                  )
-             )
-             p.cels
+            Array.mapToList
+                (\c ->
+                    ( p.name ++ "/" ++ c.name ++ "/" ++ c.image.name
+                    , c.image
+                    )
+                )
+                p.cels
         )
         d.parts
         |> List.concat
@@ -142,8 +135,16 @@ cel : Cel -> Value
 cel c =
     object
         [ ( "name", string c.name )
-        , ( "image", string c.image.name )
+        , ( "image", image c.image )
         , ( "mesh", mesh c.mesh )
+        ]
+
+
+image : Image -> Value
+image i =
+    object
+        [ ( "name", string i.name )
+        , ( "ppm", float i.ppm )
         ]
 
 

@@ -9,6 +9,9 @@ export class SliderTrack extends HTMLElement {
 
     _down: boolean = false
 
+    moveEvent: any
+    upEvent: any
+
     static get observedAttributes(): string[] {
         return ['value', 'min', 'max', 'step'];
     }
@@ -34,15 +37,24 @@ export class SliderTrack extends HTMLElement {
             const event = new Event("change")
             this.dispatchEvent(event)
         })
-        document.addEventListener('pointermove', e => {
+        this.moveEvent = e => {
             if (this._down) {
                 this.value = this.calcValue(e)
                 const event = new Event("change")
                 this.dispatchEvent(event)
             }
-        })
-        document.addEventListener('pointerup',     e => { this._down = false })
-        document.addEventListener('pointercancel', e => { this._down = false })
+        }
+        this.upEvent = e => {
+            this._down = false
+        }
+        document.addEventListener('pointermove',   this.moveEvent)
+        document.addEventListener('pointerup',     this.upEvent)
+        document.addEventListener('pointercancel', this.upEvent)
+    }
+    disconnectedCallback() {
+        document.removeEventListener('pointermove',   this.moveEvent)
+        document.removeEventListener('pointerup',     this.upEvent)
+        document.removeEventListener('pointercancel', this.upEvent)
     }
 
     calcValue(e: MouseEvent): number {
@@ -67,6 +79,10 @@ export class SliderObject extends HTMLElement {
     _down: boolean = false
     parent: SliderTrack
 
+    moveEvent: any
+    upEvent: any
+
+
     static get observedAttributes(): string[] {
         return ['value', 'movable'];
     }
@@ -89,20 +105,29 @@ export class SliderObject extends HTMLElement {
             const event = new Event("down")
             this.dispatchEvent(event)
         })
-        document.addEventListener('pointermove', e => {
+        this.moveEvent = e => {
             if (this._down && this.movable) {
 
                 this.value = this.parent.calcValue(e)
                 const event = new Event("change")
                 this.dispatchEvent(event)
             }
-        })
-        document.addEventListener('pointerup',     e => { this._down = false })
-        document.addEventListener('pointercancel', e => { this._down = false })
+        }
+        this.upEvent = e => {
+            this._down = false
+        }
+
+        document.addEventListener('pointermove',   this.moveEvent)
+        document.addEventListener('pointerup',     this.upEvent)
+        document.addEventListener('pointercancel', this.upEvent)
 
         this.update()
     }
-
+    disconnectedCallback() {
+        document.removeEventListener('pointermove',   this.moveEvent)
+        document.removeEventListener('pointerup',     this.upEvent)
+        document.removeEventListener('pointercancel', this.upEvent)
+    }
     update() {
         if (!this.parent) return
         this.style.left = this.parent.calcLeft(this.value) + "%"

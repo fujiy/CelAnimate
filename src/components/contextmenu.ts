@@ -1,6 +1,7 @@
 
 
 export class ContextMenu extends HTMLElement {
+    clickEvent: any
 
     connectedCallback() {
         this.style.display = "none"
@@ -13,10 +14,14 @@ export class ContextMenu extends HTMLElement {
             e.preventDefault()
             e.stopPropagation()
         })
-        document.addEventListener("click", e => {
+        this.clickEvent = e => {
             this.style.display = "none"
             e.stopPropagation()
-        })
+        }
+        document.addEventListener("click", this.clickEvent)
+    }
+    disconnectedCallback() {
+        document.removeEventListener("click", this.clickEvent)
     }
 }
 

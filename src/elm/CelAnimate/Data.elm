@@ -10,7 +10,7 @@ import List.Extra as List
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Maybe as Maybe
 import Maybe.Extra as Maybe
-import Parser as Parser exposing (Parser, (|.), (|=))
+import Parser as Parser exposing ((|.), (|=), Parser)
 
 
 type alias Path =
@@ -153,12 +153,13 @@ zeroImage =
     { name = ""
     , uri = ""
     , size = ( 0, 0 )
-    , ppm = 500
+    , ppm = 300
     }
 
 
 isLoaded : Image -> Bool
-isLoaded image = image.uri /= ""
+isLoaded image =
+    image.uri /= ""
 
 
 matchPart : Path -> Path -> Bool
@@ -215,13 +216,67 @@ hasKeyCel name keyframe =
     List.any (\keycel -> keycel.name == name) <| keyframe.cels
 
 
+keyCelPath : Path -> Data -> KeyCel -> Path
+keyCelPath path data keycel =
+    selectedPart path data
+        |> Maybe.andThen
+            (\part ->
+                Array.toList part.cels
+                    |> List.findIndex
+                        (\cel -> cel.name == keycel.name)
+                    |> Maybe.map
+                        (\i -> { path | cel = i })
+            )
+        |> Maybe.withDefault path
+
+
+keyCelMatches : Cel -> Keyframe -> Maybe KeyCel
+keyCelMatches cel keyframe =
+    List.find (\keycel -> keycel.name == cel.name) keyframe.cels
+
+
+
+-- Map / For -------------------------------------------------------------------
+
+
+forParts : Data -> (Path -> Part -> a) -> List a
+forParts data f =
+    Array.indexedMapToList
+        (\i -> f { nullPath | part = i })
+        data.parts
+
+
+forCels : Path -> Part -> (Path -> Cel -> a) -> List a
+forCels path part f =
+    Array.indexedMapToList
+        (\i -> f { path | cel = i })
+        part.cels
+
+
+forKeyframes : Path -> Part -> (Path -> Keyframe -> a) -> List a
+forKeyframes path part f =
+    Array.indexedMapToList
+        (\i -> f { path | keyframe = i })
+        part.keyframes
+
+
 
 -- Update ----------------------------------------------------------------------
+
+
+calcIp : Path -> Data -> Data
+calcIp path =
+    updatePart path calcInterpolationOfPart
 
 
 updatePart : Path -> (Part -> Part) -> Data -> Data
 updatePart selection f data =
     { data | parts = Array.update selection.part f data.parts }
+
+
+updatePartAndCalc : Path -> (Part -> Part) -> Data -> Data
+updatePartAndCalc selection f =
+    updatePart selection <| f >> calcInterpolationOfPart
 
 
 updateCel : Path -> (Cel -> Cel) -> Data -> Data
@@ -236,6 +291,11 @@ updateCel selection f =
     updatePart selection update
 
 
+updateCelAndCalc : Path -> (Cel -> Cel) -> Data -> Data
+updateCelAndCalc selection f =
+    updateCel selection f >> calcIp selection
+
+
 updateKeyframe : Path -> (Keyframe -> Keyframe) -> Data -> Data
 updateKeyframe selection f =
     let
@@ -246,6 +306,20 @@ updateKeyframe selection f =
             }
     in
     updatePart selection update
+
+
+updateKeyframeAndCalc : Path -> (Keyframe -> Keyframe) -> Data -> Data
+updateKeyframeAndCalc selection f =
+    updateKeyframe selection f >> calcIp selection
+
+
+updateKeyframeAndCalcWhen : Bool -> Path -> (Keyframe -> Keyframe) -> Data -> Data
+updateKeyframeAndCalcWhen calc =
+    if calc then
+        updateKeyframeAndCalc
+
+    else
+        updateKeyframe
 
 
 updateKeyCel : Path -> (KeyCel -> KeyCel) -> Data -> Data
@@ -263,6 +337,20 @@ updateKeyCel selection f data =
             }
     in
     updateKeyframe selection update data
+
+
+updateKeyCelAndCalc : Path -> (KeyCel -> KeyCel) -> Data -> Data
+updateKeyCelAndCalc selection f =
+    updateKeyCel selection f >> calcIp selection
+
+
+updateKeyCelAndCalcWhen : Bool -> Path -> (KeyCel -> KeyCel) -> Data -> Data
+updateKeyCelAndCalcWhen calc =
+    if calc then
+        updateKeyCelAndCalc
+
+    else
+        updateKeyCel
 
 
 setPPM : Float -> Cel -> Cel
@@ -394,18 +482,14 @@ deleteKeyframe at =
 -- Interpolation ---------------------------------------------------------------
 
 
-calcInterpolationOfSelectedPart : Selection -> Data -> Data
-calcInterpolationOfSelectedPart selection data =
-    updateCel selection
-        (\cel ->
-            case selectedPart selection data of
-                Just part ->
-                    calcInterpolation part.parameters part.keyframes cel
-
-                Nothing ->
-                    cel
-        )
-        data
+calcInterpolationOfPart : Part -> Part
+calcInterpolationOfPart part =
+    { part
+        | cels =
+            Array.map
+                (calcInterpolation part.parameters part.keyframes)
+                part.cels
+    }
 
 
 calcInterpolation : Dict String ParameterDesc -> Array Keyframe -> Cel -> Cel
@@ -512,51 +596,55 @@ interpolate ip pv =
 
 -- Path ------------------------------------------------------------------------
 
+
 parsePath : Data -> String -> Path
 parsePath d =
     Parser.run (partPathParser d)
         >> Result.mapError (Debug.log "parse error")
         >> Result.withDefault nullPath
 
+
 partPathParser : Data -> Parser Path
 partPathParser data =
     Parser.oneOf <|
         Array.indexedMapToList
             (\i part ->
-                 Parser.succeed (\path -> { path | part = i })
-                 |. Parser.backtrackable (Parser.keyword part.name)
-                 |= Parser.oneOf
-                 [ Parser.succeed identity
-                    |. Parser.symbol "/"
+                Parser.succeed (\path -> { path | part = i })
+                    |. Parser.backtrackable (Parser.keyword part.name)
                     |= Parser.oneOf
-                       [ celPathParser part
-                       , keyframePathParser part
-                       , Parser.succeed nullPath |. Parser.end
-                       ]
-                 , Parser.succeed nullPath |. Parser.end
-                 ]
+                        [ Parser.succeed identity
+                            |. Parser.symbol "/"
+                            |= Parser.oneOf
+                                [ celPathParser part
+                                , keyframePathParser part
+                                , Parser.succeed nullPath |. Parser.end
+                                ]
+                        , Parser.succeed nullPath |. Parser.end
+                        ]
             )
             data.parts
+
 
 celPathParser : Part -> Parser Path
 celPathParser part =
     Parser.oneOf <|
         Array.indexedMapToList
             (\i cel ->
-                 Parser.succeed (\path -> { path | cel = i })
-                 |= endPathParser cel.name
+                Parser.succeed (\path -> { path | cel = i })
+                    |= endPathParser cel.name
             )
             part.cels
+
 
 keyframePathParser : Part -> Parser Path
 keyframePathParser part =
     Parser.oneOf <|
         Array.indexedMapToList
             (\i keyframe ->
-                 Parser.succeed (\path -> { path | keyframe = i })
-                 |= endPathParser keyframe.name
+                Parser.succeed (\path -> { path | keyframe = i })
+                    |= endPathParser keyframe.name
             )
-        part.keyframes
+            part.keyframes
 
 
 endPathParser : String -> Parser Path
@@ -565,7 +653,8 @@ endPathParser name =
         |. Parser.backtrackable (Parser.keyword name)
         |. nullPathParser
 
+
 nullPathParser : Parser Path
 nullPathParser =
     Parser.succeed nullPath
-    |. Parser.oneOf [Parser.end, Parser.symbol "/" |. Parser.end]
+        |. Parser.oneOf [ Parser.end, Parser.symbol "/" |. Parser.end ]

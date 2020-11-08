@@ -44,10 +44,10 @@ type Piece a
 
 -- Calculate splines -----------------------------------------------------------
 
+
 constant : Float -> Spline
 constant c =
     Spline_ (buildPiece [ ( 0, Polynomial 0 0 0 c ) ]) 0 0
-
 
 
 makeSpline : List ( Float, Float ) -> Spline
